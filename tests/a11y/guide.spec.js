@@ -1,6 +1,7 @@
 // Checks for the behaviour the Team Technical Guide v2 asks of Track 2.
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { openSettings, chooseCaptions, chooseDescriptions } from './helpers.js';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 const ready = (page) => expect(page.locator('db-player').getByRole('slider', { name: /Position in video|በቪዲዮው/ })).toBeVisible();
@@ -10,7 +11,8 @@ test('blank page (no Bootstrap, attributes only) works and axe is clean', async 
   await ready(page);
   const player = page.locator('db-player');
   // Caption languages come from the file names, labelled in their own language.
-  await expect(player.getByLabel('Captions', { exact: true }).locator('option')).toHaveText(['Off', 'English', 'አማርኛ']);
+  await openSettings(player);
+  await expect(player.getByLabel('Caption language').locator('option')).toHaveText(['Off', 'English', 'አማርኛ']);
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(results.violations.filter((v) => ['critical', 'serious'].includes(v.impact)).map((v) => v.id)).toEqual([]);
 });
@@ -31,6 +33,7 @@ test('Space and arrow keys on the video; keyboard help is a real dialog', async 
   await page.keyboard.press('ArrowRight');
   expect(await video.evaluate((v) => v.currentTime)).toBeGreaterThanOrEqual(t0 + 4.9);
 
+  await openSettings(player);
   const helpBtn = player.getByRole('button', { name: 'Keyboard help' });
   await helpBtn.click();
   const dialog = player.getByRole('dialog', { name: 'Keyboard help' });
@@ -47,6 +50,7 @@ test('sign window: corner and size buttons (no dragging needed)', async ({ page 
   const player = page.locator('db-player');
   await player.getByRole('button', { name: 'Sign language', exact: true }).click();
   const win = player.getByRole('group', { name: 'Sign language window' }).first();
+  await openSettings(player);
   await player.getByRole('button', { name: 'Bottom left' }).click();
   const media = await player.locator('.media').boundingBox();
   const box = await player.locator('.sign').boundingBox();
@@ -106,7 +110,7 @@ test('Amharic interface comes from i18n/am.json', async ({ page }) => {
   await page.goto('/demo/blank.html');
   await page.locator('db-player').evaluate((el) => el.setAttribute('lang', 'am'));
   const player = page.locator('db-player');
-  await expect(player.getByRole('button', { name: 'የቁልፍ ሰሌዳ እገዛ' })).toBeVisible();
+  await expect(player.getByRole('button', { name: 'ግልባጭ', exact: true })).toBeVisible();
   await expect(player.locator('.player')).toHaveAttribute('lang', 'am');
 });
 
@@ -114,19 +118,49 @@ test('one language switch: interface, captions and audio description move togeth
   await page.goto('/demo/blank.html');
   await ready(page);
   const player = page.locator('db-player');
-  await player.getByLabel('Captions', { exact: true }).selectOption({ label: 'English' });
-  await player.getByLabel('Audio description').selectOption({ label: 'English' });
+  await chooseCaptions(player, { label: 'English' });
+  await chooseDescriptions(player, { label: 'English' });
 
   await player.getByLabel('Language / ቋንቋ').selectOption('am');
   // Interface is Amharic; captions and descriptions followed; focus stayed on the switch.
-  await expect(player.getByRole('button', { name: 'የቁልፍ ሰሌዳ እገዛ' })).toBeVisible();
+  await expect(player.getByRole('button', { name: 'ግልባጭ', exact: true })).toBeVisible();
   const lang = player.getByLabel('ቋንቋ / Language');
   await expect(lang).toBeFocused();
-  await expect(player.getByLabel('የጽሑፍ ትርጉም', { exact: true })).toHaveValue('1');
+  await expect(player.locator('.cc-select')).toHaveValue('1');
+  await expect(player.getByRole('button', { name: 'የጽሑፍ ትርጉም', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(player.locator('.ad-select option:checked')).toHaveText('አማርኛ');
   await expect(player.getByRole('status').first()).toContainText('አማርኛ');
 
   // The choice is remembered on this device, even though the host page says lang="en".
   await page.reload();
-  await expect(player.getByRole('button', { name: 'የቁልፍ ሰሌዳ እገዛ' })).toBeVisible();
+  await expect(player.getByRole('button', { name: 'ግልባጭ', exact: true })).toBeVisible();
+});
+
+test('easy to use: three clear rows, one tap for captions in the chosen language, on/off shown', async ({ page }) => {
+  await page.goto('/demo/blank.html');
+  await ready(page);
+  const player = page.locator('db-player');
+  // The ways to follow the lesson are one labelled group of on/off buttons.
+  const follow = player.getByRole('group', { name: 'Follow the lesson with:' });
+  for (const name of ['Captions', 'Sign language', 'Audio description', 'Transcript']) {
+    await expect(follow.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  // Rarely used controls are in Settings, not in the way.
+  await expect(player.getByLabel('Speed')).toBeHidden();
+  await expect(player.getByRole('button', { name: 'Keyboard help' })).toBeHidden();
+
+  // Choose Amharic once, then one tap: Amharic captions.
+  await player.getByLabel('Language / ቋንቋ').selectOption('am');
+  const cc = player.getByRole('button', { name: 'የጽሑፍ ትርጉም', exact: true });
+  await cc.click();
+  await expect(cc).toHaveAttribute('aria-pressed', 'true');
+  await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
+  await expect(player.locator('.cc-text:not(.sample)')).toHaveAttribute('lang', 'am');
+  await expect(player.locator('.cc-text:not(.sample)')).toContainText('ሲቪ');
+  await cc.click();
+  await expect(cc).toHaveAttribute('aria-pressed', 'false');
+
+  // Sign language: one tap, and a visible hint on how to move it.
+  await player.getByRole('button', { name: 'የምልክት ቋንቋ', exact: true }).click();
+  await expect(player.locator('.note')).toContainText('ይጎትቱ');
 });

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { openSettings, chooseCaptions, chooseDescriptions } from './helpers.js';
 
 
 test('player works inside the Savanna concept page (Level 1 script tag)', async ({ page }) => {
@@ -13,7 +14,7 @@ test('player works inside the Savanna concept page (Level 1 script tag)', async 
   expect(await player.evaluate((el) => el.parentElement.matches('#curriculum_navigation_content .savanna-styles')
     && el.previousElementSibling.querySelector('img').getAttribute('src').endsWith('VA-Content-Banner.png'))).toBe(true);
 
-  await player.getByLabel('Captions', { exact: true }).selectOption({ label: 'English' });
+  await chooseCaptions(player, { label: 'English' });
   await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
   await expect(player.locator('.cc-text:not(.sample)')).toContainText('A CV is a short document');
 

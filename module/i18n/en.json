@@ -178,5 +178,11 @@
     "step-free": "Step-free office"
   },
   "docHtml": "The lesson as a web page, with pictures described",
-  "docPdf": "The lesson as a PDF (tagged for screen readers)"
+  "docPdf": "The lesson as a PDF (tagged for screen readers)",
+  "followWith": "Follow the lesson with:",
+  "captionLanguage": "Caption language",
+  "adLanguage": "Description language",
+  "playback": "Playback",
+  "signMoveHint": "Sign language is on. Drag the window to move it, or use Settings to move or resize it.",
+  "signTurnOnFirst": "Turn on Sign language first, then choose where its window goes and how big it is."
 }

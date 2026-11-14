@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { openSettings, chooseCaptions, chooseDescriptions } from './helpers.js';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -47,13 +48,13 @@ test('keyboard only: Tab to play, start and pause the video', async ({ page, bro
 test('captions: choose Amharic, resize and recolour', async ({ page }) => {
   await openDemo(page);
   const player = page.locator('db-player');
-  await player.getByLabel('Captions', { exact: true }).selectOption({ label: 'አማርኛ' });
+  await chooseCaptions(player, { label: 'አማርኛ' });
   await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
   const cc = player.locator('.cc-text:not(.sample)');
   await expect(cc).toContainText('ሲቪ ችሎታዎን');
   await expect(cc).toHaveAttribute('lang', 'am');
 
-  await player.getByRole('button', { name: 'Settings' }).click();
+  await openSettings(player);
   await player.getByLabel('Text size').selectOption('xl');
   await player.getByLabel('Text colour').selectOption('yellow');
   await expect(cc).toHaveCSS('color', 'rgb(255, 235, 59)');
@@ -92,6 +93,7 @@ test('sign language window: on, move by keyboard, resize, stays in sync', async 
   await expect(win).toBeVisible();
 
   // Put it over the video (phones default to beside it), then arrow keys move it left and plus makes it bigger.
+  await openSettings(player);
   await player.getByRole('button', { name: 'Top right' }).click();
   await expect(player.getByRole('button', { name: 'Top right' })).toHaveAttribute('aria-pressed', 'true');
   const before = await win.boundingBox();
@@ -114,6 +116,7 @@ test('sign language window: on, move by keyboard, resize, stays in sync', async 
   expect(Math.abs(main - sign)).toBeLessThan(0.5);
 
   // "Beside the video" takes it out of the picture; axe is still clean.
+  await openSettings(player);
   await player.getByRole('button', { name: 'Beside the video' }).click();
   await expect(player.locator('.media')).toHaveClass(/beside/);
   await axe(page);
@@ -125,7 +128,7 @@ test('sign window: S shortcut toggles it and is announced', async ({ page }) => 
   await player.getByRole('button', { name: 'Play' }).focus();
   await page.keyboard.press('s');
   await expect(player.getByRole('group', { name: 'Sign language window' })).toBeVisible();
-  await expect(player.getByRole('status').first()).toHaveText('Sign language on');
+  await expect(player.getByRole('status').first()).toContainText('Sign language is on');
   await page.keyboard.press('s');
   await expect(player.getByRole('group', { name: 'Sign language window' })).toBeHidden();
 });
@@ -133,7 +136,7 @@ test('sign window: S shortcut toggles it and is announced', async ({ page }) => 
 test('audio description: read out, video pauses, then resumes', async ({ page }) => {
   await openDemo(page);
   const player = page.locator('db-player');
-  await player.getByLabel('Audio description').selectOption({ label: 'English' });
+  await chooseDescriptions(player, { label: 'English' });
   const video = player.locator('video.main');
   await video.evaluate((v) => { v.currentTime = 4.6; return v.play(); });
 
@@ -149,7 +152,7 @@ test('audio description: read out, video pauses, then resumes', async ({ page })
 test('audio description: Amharic text is marked as Amharic for the screen reader', async ({ page }) => {
   await openDemo(page);
   const player = page.locator('db-player');
-  await player.getByLabel('Audio description').selectOption({ label: 'አማርኛ' });
+  await chooseDescriptions(player, { label: 'አማርኛ' });
   await player.locator('video.main').evaluate((v) => { v.currentTime = 9.6; return v.play(); });
   const live = player.locator('.ad-live');
   await expect(live).toContainText('ደረጃ 1', { timeout: 5000 });
