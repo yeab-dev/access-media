@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isValidVtt, parseVtt } from './vtt.js';
 import { requireStaff } from './sign.js';
+import { events } from './events.js';
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const LANG = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/;
@@ -75,6 +76,7 @@ export function captionsRouter({ lessonsDir }) {
     const mpath = path.join(dirOf(id), 'manifest.json');
     await writeFile(`${mpath}.tmp`, JSON.stringify(manifest, null, 2));
     await rename(`${mpath}.tmp`, mpath);
+    events.emit('captions.updated', { lesson: id, kind, lang, lines: parseVtt(vtt).length, reviewed: meta.reviewed });
     res.status(201).json({ ok: true, kind, lang, src: file, lines: parseVtt(vtt).length });
   });
 
