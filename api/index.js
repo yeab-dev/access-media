@@ -8,6 +8,7 @@ import { signRouter, adminToken } from './sign.js';
 import { jobsRouter } from './jobs.js';
 import { certificatesRouter } from './certificates.js';
 import { captionsRouter } from './captions.js';
+import { documentsRouter } from './documents.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -67,6 +68,7 @@ function publicLesson(req, m) {
     links: {
       transcript: `${origin(req)}/api/v1/lessons/${m.id}/transcript`,
       offlinePack: `${origin(req)}/api/v1/lessons/${m.id}/offline-pack`,
+      document: `${origin(req)}/api/v1/lessons/${m.id}/document`,
     },
   };
 }
@@ -144,6 +146,7 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
 
 api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
 api.use(captionsRouter({ lessonsDir: LESSONS_DIR }));
+api.use(documentsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(jobsRouter({ jobsFile: path.resolve(process.env.JOBS_FILE || path.join(ROOT, 'demo', 'data', 'jobs.json')) }));
 const certificates = certificatesRouter({ dataDir: DATA_DIR, publicUrl: process.env.PUBLIC_URL });
 api.use(certificates.api);

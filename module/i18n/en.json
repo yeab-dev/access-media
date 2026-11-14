@@ -176,5 +176,7 @@
     "flexible-hours": "Flexible hours",
     "screen-reader": "Screen reader friendly tools",
     "step-free": "Step-free office"
-  }
+  },
+  "docHtml": "The lesson as a web page, with pictures described",
+  "docPdf": "The lesson as a PDF (tagged for screen readers)"
 }

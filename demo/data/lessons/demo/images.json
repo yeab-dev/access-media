@@ -1,0 +1,35 @@
+{
+  "note": "One entry per slide: when it appears, a short title (used as a heading) and a real description of the picture. Amharic is a draft for native-speaker review.",
+  "images": [
+    {
+      "time": 0.5,
+      "en": { "title": "Introduction", "alt": "Title slide. The words \"How to write a CV\" in large white letters on a dark blue background." },
+      "am": { "title": "መግቢያ", "alt": "የርዕስ ስላይድ። \"How to write a CV\" (ሲቪ እንዴት እንደሚጻፍ) የሚሉ ቃላት በትልቅ ነጭ ፊደል በጥቁር ሰማያዊ ዳራ ላይ።" }
+    },
+    {
+      "time": 5,
+      "en": { "title": "What is a CV?", "alt": "Slide with the question \"What is a CV?\" in white letters on dark blue." },
+      "am": { "title": "ሲቪ ምንድን ነው?", "alt": "\"What is a CV?\" (ሲቪ ምንድን ነው?) የሚል ጥያቄ በነጭ ፊደል በጥቁር ሰማያዊ ላይ ያለበት ስላይድ።" }
+    },
+    {
+      "time": 10,
+      "en": { "title": "Step 1: Your details", "alt": "Slide: \"1. Name, phone, town\". The first thing on a CV is how to reach you." },
+      "am": { "title": "ደረጃ 1፦ የእርስዎ መረጃ", "alt": "ስላይድ፦ \"1. Name, phone, town\" (ስም፣ ስልክ፣ ከተማ)። በሲቪ ላይ የመጀመሪያው ነገር እርስዎን እንዴት ማግኘት እንደሚቻል ነው።" }
+    },
+    {
+      "time": 15,
+      "en": { "title": "Step 2: Education and training", "alt": "Slide: \"2. Education and training\" in white letters on dark blue." },
+      "am": { "title": "ደረጃ 2፦ ትምህርት እና ስልጠና", "alt": "ስላይድ፦ \"2. Education and training\" (ትምህርት እና ስልጠና) በነጭ ፊደል በጥቁር ሰማያዊ ላይ።" }
+    },
+    {
+      "time": 20,
+      "en": { "title": "Step 3: Work experience", "alt": "Slide: \"3. Work experience\" in white letters on dark blue." },
+      "am": { "title": "ደረጃ 3፦ የሥራ ልምድ", "alt": "ስላይድ፦ \"3. Work experience\" (የሥራ ልምድ) በነጭ ፊደል በጥቁር ሰማያዊ ላይ።" }
+    },
+    {
+      "time": 25,
+      "en": { "title": "Keep it short", "alt": "Slide: \"One or two pages\". A CV should be short." },
+      "am": { "title": "አጭር ያድርጉት", "alt": "ስላይድ፦ \"One or two pages\" (አንድ ወይም ሁለት ገጽ)። ሲቪ አጭር መሆን አለበት።" }
+    }
+  ]
+}
