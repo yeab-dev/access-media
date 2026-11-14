@@ -8,11 +8,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js",
+    "start": "node api/index.js",
+    "dev": "node --watch api/index.js",
+    "demo-media": "./scripts/make-demo.sh",
     "test": "node --test \"tests/unit/**/*.test.js\"",
-    "a11y": "playwright test",
-    "savanna": "SAVANNA_DIR=../Savanna-static-pages node --watch server/index.js"
+    "a11y": "playwright test"
   },
   "dependencies": {
     "express": "^5.3.0",

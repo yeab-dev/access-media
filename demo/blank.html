@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>db-player on a blank page</title>
+<!-- 1. load the module -->
+<script type="module" src="/module/db-player.js"></script>
+</head>
+<body>
+<main>
+  <h1>db-player on a blank page</h1>
+  <p>No Bootstrap and no Savanna CSS: the module brings everything it needs. This page uses attributes only (Level 1), so the lesson files could be on any web server.</p>
+
+  <!-- 2. place it -->
+  <db-player
+    label="How to write a CV"
+    src="/media/demo/lesson.mp4"
+    poster="/media/demo/poster.jpg"
+    captions="/media/demo/lesson.en.vtt,/media/demo/lesson.am.vtt"
+    sign="/media/demo/lesson.ethsl.mp4"
+    describe="/media/demo/lesson.ad.en.vtt,/media/demo/lesson.ad.am.vtt"
+    lang="en"></db-player>
+
+  <h2>Events the host receives</h2>
+  <p>The host decides what to do with these. Shown here so you can see them.</p>
+  <ol id="events" style="overflow-wrap: anywhere"></ol>
+</main>
+
+<!-- 3. optionally, listen to it -->
+<script>
+  const list = document.getElementById('events');
+  for (const name of ['ready', 'progress', 'complete', 'prefs', 'sign-requested']) {
+    document.addEventListener(`db-player:${name}`, (e) => {
+      const li = document.createElement('li');
+      li.textContent = `db-player:${name} ${JSON.stringify(e.detail)}`;
+      list.prepend(li);
+      while (list.children.length > 8) list.lastElementChild.remove();
+    });
+  }
+</script>
+</body>
+</html>

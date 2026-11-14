@@ -1,8 +1,8 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import yauzl from 'yauzl';
-import { app } from '../../server/index.js';
-import { renderOfflinePage, packContents } from '../../server/offline.js';
+import { app } from '../../api/index.js';
+import { renderOfflinePage, packContents } from '../../api/offline.js';
 
 let server;
 let base;
@@ -50,8 +50,8 @@ test('offline page embeds captions as data URLs and marks each transcript langua
   assert.doesNotMatch(html, /https?:\/\//, 'no network requests from the offline page');
 });
 
-test('GET offline.zip returns the pack with media, captions, page and readme', async () => {
-  const res = await fetch(`${base}/api/media/demo/offline.zip`);
+test('GET offline-pack returns the pack with media, captions, page and readme', async () => {
+  const res = await fetch(`${base}/api/v1/lessons/demo/offline-pack`);
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-disposition'), /demo-offline\.zip/);
   assert.equal(res.headers.get('accept-ranges'), 'bytes');
@@ -62,19 +62,19 @@ test('GET offline.zip returns the pack with media, captions, page and readme', a
   }
 });
 
-test('offline.zip supports resuming (Range) and is not rebuilt when nothing changed', async () => {
-  const full = await fetch(`${base}/api/media/demo/offline.zip`);
+test('offline-pack supports resuming (Range) and is not rebuilt when nothing changed', async () => {
+  const full = await fetch(`${base}/api/v1/lessons/demo/offline-pack`);
   const modified = full.headers.get('last-modified');
   await full.arrayBuffer();
-  const part = await fetch(`${base}/api/media/demo/offline.zip`, { headers: { Range: 'bytes=100-199' } });
+  const part = await fetch(`${base}/api/v1/lessons/demo/offline-pack`, { headers: { Range: 'bytes=100-199' } });
   assert.equal(part.status, 206);
   assert.equal((await part.arrayBuffer()).byteLength, 100);
-  const again = await fetch(`${base}/api/media/demo/offline.zip`);
+  const again = await fetch(`${base}/api/v1/lessons/demo/offline-pack`);
   assert.equal(again.headers.get('last-modified'), modified);
   await again.arrayBuffer();
 });
 
-test('offline.zip rejects bad ids and unknown lessons', async () => {
-  assert.equal((await fetch(`${base}/api/media/..%2Fetc/offline.zip`)).status, 400);
-  assert.equal((await fetch(`${base}/api/media/nope/offline.zip`)).status, 404);
+test('offline-pack rejects bad ids and unknown lessons', async () => {
+  assert.equal((await fetch(`${base}/api/v1/lessons/..%2Fetc/offline-pack`)).status, 400);
+  assert.equal((await fetch(`${base}/api/v1/lessons/nope/offline-pack`)).status, 404);
 });

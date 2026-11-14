@@ -29,10 +29,12 @@ function unzip(file, dir) {
 
 test('download the offline pack from the player and use it from disk', async ({ page }) => {
   test.skip(test.info().project.name === 'android', 'download flow runs on desktop');
-  await page.goto('/');
-  const player = page.locator('access-player');
-  const link = player.getByRole('link', { name: 'Download for offline' });
+  await page.goto('/demo/');
+  const player = page.locator('db-player');
+  const link = player.getByRole('link', { name: /Download for offline/ });
   await expect(link).toBeVisible();
+  // The size is shown before the learner taps.
+  await expect(link).toContainText(/\(0\.\d MB\)/);
 
   const [download] = await Promise.all([page.waitForEvent('download'), link.click()]);
   expect(download.suggestedFilename()).toBe('demo-offline.zip');
