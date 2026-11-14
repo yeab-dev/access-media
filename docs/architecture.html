@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Accessible Learning Media — Architecture and User Guide</title>
+<meta name="description" content="Track 2 proposal for the Digital Bridge Accessibility Hackathon 2026: architecture, capabilities and how learners, staff, platforms and employers use the system.">
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  :root { --ink:#16181d; --muted:#4a5060; --line:#d5d9e2; --accent:#0b5cad; --accent-soft:#e8f0fa; --warn-soft:#fff4e0; }
+  * { box-sizing: border-box; }
+  body { font-family: "Noto Sans", "Noto Sans Ethiopic", "DejaVu Sans", sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; margin: 0; background:#fff; }
+  h1 { font-size: 22pt; line-height: 1.2; margin: 0 0 4pt; color: var(--accent); }
+  h2 { font-size: 14pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 2px solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 12pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
+  li { margin: 2pt 0; }
+  code, pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; }
+  pre { background: #f4f6f9; border: 1px solid var(--line); border-radius: 4pt; padding: 7pt 9pt; white-space: pre-wrap; margin: 4pt 0 8pt; break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 9.6pt; break-inside: auto; }
+  th, td { border: 1px solid var(--line); padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); }
+  tr { break-inside: avoid; }
+  .subtitle { font-size: 12pt; color: var(--muted); margin: 0 0 10pt; }
+  .meta { font-size: 9.5pt; color: var(--muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 5pt 0; margin-bottom: 10pt; }
+  .callout { background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 7pt 10pt; margin: 8pt 0; break-inside: avoid; }
+  .callout.warn { background: var(--warn-soft); border-left-color: #b26b00; }
+  .persona { border: 1px solid var(--line); border-radius: 5pt; padding: 6pt 10pt; margin: 6pt 0; break-inside: avoid; }
+  .persona h4 { margin: 0 0 3pt; font-size: 10.5pt; }
+  .page-break { break-before: page; }
+  /* Architecture diagram drawn in HTML so its text stays real, tagged text */
+  .diagram { border: 1px solid var(--line); border-radius: 6pt; padding: 9pt; margin: 6pt 0 4pt; break-inside: avoid; }
+  .layer { border: 1.5px solid var(--accent); border-radius: 5pt; padding: 6pt 8pt; margin: 0 0 4pt; background: #fff; }
+  .layer strong { color: var(--accent); }
+  .layer .tag { float: right; font-size: 8.5pt; background: var(--accent); color: #fff; border-radius: 3pt; padding: 0 5pt; }
+  .arrow { text-align: center; color: var(--muted); font-size: 9pt; margin: 0 0 4pt; }
+  .row { display: flex; gap: 6pt; }
+  .row .layer { flex: 1; }
+  .small { font-size: 9pt; color: var(--muted); }
+  figcaption { font-size: 9pt; color: var(--muted); margin-top: 3pt; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Accessible Learning Media</h1>
+  <p class="subtitle">Track 2 — Architecture, capabilities and how people use it</p>
+  <p class="meta">Digital Bridge Accessibility Hackathon 2026 · ALX Tech Hub, Lideta · 14–15 November 2026<br>
+  Status: <strong>proposal for team review</strong> (Day one, architecture block). Nothing described here is built yet.</p>
+</header>
+
+<main>
+<section aria-labelledby="s-summary">
+  <h2 id="s-summary">1. Summary</h2>
+  <p>We are building an <strong>embeddable video player and a transcript pipeline</strong> for learners who are Deaf, hard of hearing, blind, or on a slow connection. It plugs into the platforms learners already use, starting with Savanna, rather than being a separate app.</p>
+  <div class="callout"><p style="margin:0">“I do not need a special app. I need the one everyone uses to work with my phone.” — participant, co-design session, 21 October 2026</p></div>
+  <h3>What the track requires, and where we cover it</h3>
+  <table>
+    <thead><tr><th scope="col">Requirement (slide 10)</th><th scope="col">Our answer</th></tr></thead>
+    <tbody>
+      <tr><td>Player that works by keyboard and screen reader</td><td><code>&lt;access-player&gt;</code> built from native buttons, menus and sliders</td></tr>
+      <tr><td>English and Amharic captions you can resize and recolour</td><td>The player draws captions itself, with size, colour and background settings</td></tr>
+      <tr><td>Movable, resizable Ethiopian Sign Language window</td><td>Synced second video. Drag, arrow keys, resize buttons, corner presets</td></tr>
+      <tr><td>Audio description</td><td>Text description track, read by the screen reader or spoken, with optional pause</td></tr>
+      <tr><td>Offline pack for a 3G phone: audio, text, light HTML</td><td>Zip with MP3, 240p video, caption files and a self-contained HTML transcript</td></tr>
+      <tr><td>Tagged PDF and HTML documents with image descriptions</td><td>Generated from the caption files and an image alt-text file</td></tr>
+      <tr><td><em>Extra:</em> Braille export (.brf)</td><td>Generated from the same text with liblouis</td></tr>
+      <tr><td><em>Extra:</em> Recorded live-session viewer with captions and chat log</td><td>Player mode with chat replay panel (if time allows)</td></tr>
+      <tr><td>Career gateway: accessible job card with audio summary at 200% zoom</td><td><code>&lt;access-job-card&gt;</code> with a Listen button</td></tr>
+      <tr><td>Career gateway: verifiable certificate links for employers</td><td>Open Badges 3.0 credentials with a public verify page</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="s-arch" class="page-break">
+  <h2 id="s-arch">2. Architecture overview</h2>
+  <figure class="diagram" aria-describedby="diagram-desc">
+    <div class="layer"><span class="tag">Level 1</span><strong>Any website</strong> — Savanna, job boards, training institutions<br>
+      <span class="small">Adds one script tag, then uses <code>&lt;access-player&gt;</code> and <code>&lt;access-job-card&gt;</code> (or an iframe embed)</span></div>
+    <p class="arrow">↓ REST + JSON, described by an OpenAPI spec</p>
+    <div class="layer"><span class="tag">Level 2</span><strong>API server</strong> — Node 24, Express<br>
+      <span class="small">Media · caption tracks · documents (HTML / PDF / BRF) · jobs · badges</span></div>
+    <p class="arrow">↓ background jobs</p>
+    <div class="row">
+      <div class="layer"><strong>Pipeline</strong><br><span class="small">ffmpeg, headless Chromium (tagged PDF), liblouis (Braille)</span></div>
+      <div class="layer"><strong>Speech recognition</strong><br><span class="small">Optional, local Whisper container. Nothing leaves the server.</span></div>
+      <div class="layer"><strong>Storage</strong><br><span class="small">/data volume: files and JSON, no database</span></div>
+    </div>
+    <div class="layer" style="margin-top:4pt"><span class="tag">Level 3</span><strong>Open standards</strong> — WebVTT, schema.org VideoObject and JobPosting, Open Badges 3.0</div>
+    <figcaption id="diagram-desc">Figure 1. Websites load the player with a script tag and talk to the API server. The server hands slow work to a background pipeline, optionally uses a local speech-recognition service, and stores everything as files. All data is exchanged in open standard formats. The whole system starts with one <code>docker compose up</code>.</figcaption>
+  </figure>
+
+  <h3>Components</h3>
+  <table>
+    <thead><tr><th scope="col">Component</th><th scope="col">What it does</th><th scope="col">Technology</th></tr></thead>
+    <tbody>
+      <tr><td><code>&lt;access-player&gt;</code></td><td>Accessible video player with captions, sign language, audio description, transcript and data saver</td><td>Plain JavaScript web component, no framework, target under 30 KB</td></tr>
+      <tr><td><code>&lt;access-job-card&gt;</code></td><td>Accessible job listing with audio summary and Ethiopian calendar dates</td><td>Web component</td></tr>
+      <tr><td>API server</td><td>Uploads, lesson manifests, documents, offline packs, jobs, badges</td><td>Node 24, Express, OpenAPI 3.1</td></tr>
+      <tr><td>Pipeline</td><td>Makes video and audio versions, documents and offline packs</td><td>ffmpeg, headless Chromium, liblouis</td></tr>
+      <tr><td>Speech recognition (optional)</td><td>Drafts English captions, marked “needs review”</td><td>Local Whisper container</td></tr>
+      <tr><td>Storage</td><td>One folder per lesson plus JSON metadata</td><td>Docker volume</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="s-player">
+  <h2 id="s-player">3. The player</h2>
+  <ul>
+    <li><strong>Controls:</strong> real <code>&lt;button&gt;</code>, <code>&lt;select&gt;</code> and slider elements, so NVDA and TalkBack announce them correctly. Touch targets at least 44 px. Layout reflows at 200% zoom.</li>
+    <li><strong>Keyboard shortcuts</strong> (active only while focus is inside the player): <code>k</code> play/pause, <code>j</code>/<code>l</code> back/forward 10 s, <code>c</code> captions, <code>d</code> descriptions, <code>s</code> sign window, <code>t</code> transcript, <code>f</code> fullscreen.</li>
+    <li><strong>Captions:</strong> English and Amharic, drawn by the player so learners can change size, text colour and background. Ethiopic fonts.</li>
+    <li><strong>Sign language window:</strong> a second, muted video kept in time with the lesson. Move it by dragging or with arrow keys, resize it with buttons or by dragging, snap it to a corner. Stays visible in fullscreen.</li>
+    <li><strong>Audio description:</strong> a text track. Read by the screen reader through a live region, or spoken aloud with the option to pause the lesson while it speaks.</li>
+    <li><strong>Transcript panel:</strong> every line is a button that jumps to that moment; the current line is highlighted.</li>
+    <li><strong>Data saver:</strong> 240p, 360p or audio only. Defaults to 240p on slow connections. Settings are saved on the learner’s own device.</li>
+    <li><strong>Interface language:</strong> English or Amharic.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="s-content">
+  <h2 id="s-content">4. Content model: one source, many outputs</h2>
+  <p>Staff write or review a few small text files per lesson. Every other format is generated from them, so fixing one typo updates everything.</p>
+  <table>
+    <thead><tr><th scope="col">Source file</th><th scope="col">Generates</th></tr></thead>
+    <tbody>
+      <tr><td><code>captions.en.vtt</code>, <code>captions.am.vtt</code></td><td>Player captions, transcript HTML, tagged PDF, Braille, offline pack</td></tr>
+      <tr><td><code>descriptions.en.vtt</code> (and <code>.am</code>)</td><td>Player audio description, description lines in every transcript</td></tr>
+      <tr><td><code>images.json</code> (alt text for slides and diagrams)</td><td>Image descriptions in HTML and PDF documents</td></tr>
+      <tr><td><code>sign.mp4</code> (interpreter recording)</td><td>Sign language window</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="s-pipeline">
+  <h2 id="s-pipeline">5. Processing pipeline</h2>
+  <ol>
+    <li><strong>Video:</strong> ffmpeg makes a 360p MP4, a 240p MP4 (about 200 kbps), an audio-only MP3 (32 kbps mono) and a poster image.</li>
+    <li><strong>Captions:</strong> uploaded by staff, or drafted by local Whisper and marked “needs review”. Nothing is sent to a cloud service.</li>
+    <li><strong>Documents:</strong> tagged HTML transcript; tagged PDF printed by headless Chromium (which keeps document structure); Braille .brf from liblouis.</li>
+    <li><strong>Offline pack:</strong> a zip with the MP3, 240p MP4, caption files and a light <code>index.html</code>.</li>
+  </ol>
+</section>
+
+<section aria-labelledby="s-offline">
+  <h2 id="s-offline">6. Offline plan for a 3G phone</h2>
+  <ul>
+    <li><strong>Offline pack</strong> (audio, text, light HTML, as the brief asks). Files are named so VLC loads captions automatically. The HTML page embeds the captions inside itself, so it works when opened straight from the phone’s storage.</li>
+    <li><strong>Light streaming:</strong> only the poster loads at first; video streams in pieces (HTTP range requests); 240p by default on slow connections.</li>
+    <li><strong>Service worker</strong> on our demo page so lessons opened once keep working offline. Optional on host sites, which control their own service worker.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="s-api">
+  <h2 id="s-api">7. API (Level 2)</h2>
+  <p>Described in an OpenAPI 3.1 spec so other platforms can generate client code.</p>
+  <pre>GET  /api/media                    list lessons
+POST /api/media                    upload video (admin) → 202 + processing status
+GET  /api/media/{id}               manifest: sources, tracks, sign video, documents, JSON-LD
+POST /api/media/{id}/tracks        upload a caption or description file (admin)
+POST /api/media/{id}/sign          upload sign language video (admin)
+GET  /api/media/{id}/transcript    ?lang=en|am &amp;format=html|pdf|brf
+GET  /api/media/{id}/offline.zip   offline pack
+GET  /embed/{id}                   iframe embed page
+
+GET  /api/jobs                     schema.org/JobPosting list
+GET  /api/jobs/{id}/audio          audio summary of a job card
+POST /api/badges                   issue an Open Badges 3.0 credential (admin)
+GET  /api/badges/{id}              verifiable credential (JSON) and readable page</pre>
+  <p><strong>Security and privacy:</strong> uploads and badge issuing need an admin token. Watching lessons is public and needs no account. Other sites may read lesson data (CORS). We store the minimum personal data and nothing leaves the host without consent.</p>
+</section>
+
+<section aria-labelledby="s-use">
+  <h2 id="s-use">8. How people use it</h2>
+
+  <h3>8.1 Learners</h3>
+  <div class="persona"><h4>A Deaf learner on Savanna</h4>
+    <ul><li>Turns on Amharic captions and makes them larger, yellow on black.</li>
+    <li>The sign language interpreter appears in a corner; they drag it left and enlarge it so it doesn’t cover the slides. It stays in sync when they pause or skip.</li>
+    <li>Rereads anything they missed in the transcript panel and jumps back to that moment.</li></ul></div>
+  <div class="persona"><h4>A blind learner using NVDA or TalkBack</h4>
+    <ul><li>Every control is announced, for example “Play, button” or “Captions, English”.</li>
+    <li>With audio description on, the screen reader says “Description: a slide shows the four steps of a CV…” and can pause the lesson while it reads.</li>
+    <li>Downloads the transcript as tagged HTML or PDF with images described, or as Braille (.brf) for a Braille display or embosser.</li></ul></div>
+  <div class="persona"><h4>A learner outside Addis Ababa on a low-cost Android phone with 3G</h4>
+    <ul><li>The player starts at 240p; they can switch to audio only.</li>
+    <li>On café Wi-Fi they tap “Download for offline” and get a small zip. At home with no data they open it from their files or in VLC, with captions.</li></ul></div>
+  <div class="persona"><h4>A learner with low vision or a physical disability</h4>
+    <ul><li>Everything works at 200% zoom and by keyboard only; buttons are large enough to tap easily.</li></ul></div>
+
+  <h3>8.2 Teachers and content staff</h3>
+  <ol>
+    <li>Upload a lesson video through the API or a simple admin page.</li>
+    <li>The server makes 360p, 240p and audio-only versions and a thumbnail.</li>
+    <li>Local speech recognition optionally drafts English captions; staff correct them and add Amharic captions and audio description text.</li>
+    <li>Upload the interpreter’s sign language recording.</li>
+    <li>Transcripts (HTML, PDF, Braille) and the offline pack are generated automatically.</li>
+  </ol>
+
+  <h3>8.3 Other platforms (software integration)</h3>
+  <table>
+    <thead><tr><th scope="col">Level</th><th scope="col">Who uses it</th><th scope="col">How</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Script tag</td><td>Savanna, job boards, institution websites</td><td><code>&lt;script type="module" src="…/access-player.js"&gt;</code> then <code>&lt;access-player media="lesson-3" lang="am"&gt;</code>. Sites that can’t run scripts use <code>&lt;iframe src="…/embed/lesson-3"&gt;</code>.</td></tr>
+      <tr><td>2 · REST API</td><td>Platform engineers, mobile apps</td><td>Upload videos from their own admin tools; fetch a lesson manifest and build their own interface. Client code generated from the OpenAPI spec.</td></tr>
+      <tr><td>3 · Open standards</td><td>Any compatible software, no custom work</td><td>WebVTT captions work in VLC, Moodle and other players. schema.org VideoObject and JobPosting are readable by catalogues and job search engines. Open Badges 3.0 certificates verify in any badge wallet.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.4 Graduates and employers (career gateway)</h3>
+  <ul>
+    <li>A graduate browses accessible job cards (200% zoom, screen reader), with dates in the Ethiopian and Gregorian calendars, and taps <strong>Listen</strong> for an audio summary in Amharic or English.</li>
+    <li>They share their certificate link with an employer.</li>
+    <li>The employer opens it and sees the course, the issuer and “Verified”. The check uses the server’s digital signature, so a fake or altered certificate fails, with no phone call or login needed.</li>
+  </ul>
+
+  <h3>8.5 What it deliberately does not do</h3>
+  <ul>
+    <li>Send lesson audio or learner data to outside services.</li>
+    <li>Require an account to watch, or track learners. Settings stay on the learner’s phone.</li>
+    <li>Become a separate app. It plugs into the platforms learners already use.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="s-decisions">
+  <h2 id="s-decisions">9. Key decisions</h2>
+  <table>
+    <thead><tr><th scope="col">Decision</th><th scope="col">Why</th></tr></thead>
+    <tbody>
+      <tr><td>Plain web component, not React</td><td>Smallest download on 3G and works on any host site. Helps “can be adopted” and “can be kept running”.</td></tr>
+      <tr><td>Player draws its own captions</td><td>Needed for resize and recolour; consistent on every browser.</td></tr>
+      <tr><td>Text-based audio description</td><td>Cheap to write, translatable to Amharic, tiny files. Recorded description audio can be added later.</td></tr>
+      <tr><td>Files on disk, no database</td><td>No hosting cost and nothing extra to run.</td></tr>
+      <tr><td>Speech recognition optional and local</td><td>No paid-API lock-in; nothing leaves the host without consent.</td></tr>
+      <tr><td>One set of caption files as the source</td><td>One edit updates the player, transcripts, PDF and Braille.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="s-judging">
+  <h2 id="s-judging">10. How this maps to judging</h2>
+  <table>
+    <thead><tr><th scope="col">Criterion</th><th scope="col">Points</th><th scope="col">How we earn it</th></tr></thead>
+    <tbody>
+      <tr><td>Gate</td><td>Pass/fail</td><td>Co-designer tests from the first hours; axe-core runs in automated tests; WCAG 2.2 AA conformance report written alongside the code.</td></tr>
+      <tr><td>Works for the people it is for</td><td>30</td><td>Built around the 21 October findings (no captions, no sign language) and tested on the co-designer’s own device every few hours.</td></tr>
+      <tr><td>Can be adopted</td><td>25</td><td>All three levels; one-command Docker Compose; README a judge can follow in under an hour.</td></tr>
+      <tr><td>Built for Ethiopia</td><td>15</td><td>Amharic captions and interface, Ethiopic fonts, Ethiopian calendar, 240p and audio-only, offline pack.</td></tr>
+      <tr><td>Quality, security and privacy</td><td>15</td><td>Automated tests, admin token for changes, minimal data, no outside services.</td></tr>
+      <tr><td>Can be kept running</td><td>15</td><td>No database, no paid APIs, small codebase, clear README.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="s-risks">
+  <h2 id="s-risks">11. Risks and open questions</h2>
+  <div class="callout warn">
+  <ul style="margin:0">
+    <li><strong>Amharic captions:</strong> Whisper’s Amharic is weak. Plan to write or correct them by hand, reviewed by the co-designer or interpreters.</li>
+    <li><strong>Sign language video:</strong> we need a real Ethiopian Sign Language recording for the demo. Ask the interpreters in the room for about one minute.</li>
+    <li><strong>Savanna starter:</strong> we assume it accepts a script tag. Confirm with the mentor.</li>
+    <li><strong>Time:</strong> Braille and the live-session viewer are extras; build them only after the required items pass the gate.</li>
+  </ul></div>
+</section>
+
+<section aria-labelledby="s-plan">
+  <h2 id="s-plan">12. Build order and team split</h2>
+  <table>
+    <thead><tr><th scope="col">#</th><th scope="col">Build</th><th scope="col">When</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Player: keyboard and screen reader, English and Amharic captions with size and colour, transcript panel</td><td>Saturday</td></tr>
+      <tr><td>2</td><td>Sign language window (move, resize) and audio description</td><td>Saturday</td></tr>
+      <tr><td>3</td><td>Offline pack: MP3, 240p video, captions, light HTML</td><td>Saturday</td></tr>
+      <tr><td>4</td><td>Career gateway: job card with audio summary, Open Badges 3.0 certificate links</td><td>Saturday evening</td></tr>
+      <tr><td>5</td><td>Tagged PDF and HTML documents with image descriptions</td><td>Sunday morning</td></tr>
+      <tr><td>6</td><td>Docker Compose, README, OpenAPI spec, conformance report</td><td>Sunday, before 16:30</td></tr>
+      <tr><td>7</td><td>Extras: Braille .brf, then live-session viewer with chat log</td><td>If time allows</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th scope="col">Person</th><th scope="col">Owns</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>The player</td></tr>
+      <tr><td>B</td><td>Sign language window and audio description</td></tr>
+      <tr><td>C</td><td>Server, ffmpeg pipeline, offline pack</td></tr>
+      <tr><td>D</td><td>Career gateway, and testing with the co-designer</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Submission by 16:30 on Sunday 15 November: code, README, Docker Compose file and WCAG 2.2 AA conformance report.</p>
+</section>
+</main>
+</body>
+</html>

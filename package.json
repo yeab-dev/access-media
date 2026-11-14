@@ -1,0 +1,25 @@
+{
+  "name": "access-media",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Accessible learning media: embeddable video player, caption/transcript pipeline, offline packs and career gateway",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test \"tests/unit/**/*.test.js\"",
+    "a11y": "playwright test"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "multer": "^2.5.0",
+    "yazl": "^3.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "demo",
+  "title": "How to write a CV",
+  "lang": "en",
+  "duration": 30,
+  "poster": "poster.jpg",
+  "sources": [
+    { "quality": "360p", "src": "video-360.mp4", "type": "video/mp4" },
+    { "quality": "240p", "src": "video-240.mp4", "type": "video/mp4" },
+    { "quality": "audio", "src": "audio.mp3", "type": "audio/mpeg" }
+  ],
+  "tracks": [
+    { "kind": "captions", "srclang": "en", "label": "English", "src": "captions.en.vtt" },
+    { "kind": "captions", "srclang": "am", "label": "አማርኛ", "src": "captions.am.vtt" }
+  ]
+}
