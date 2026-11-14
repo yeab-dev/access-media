@@ -37,6 +37,7 @@ const ICONS = {
   muted: '<path d="M3 9v6h4l5 5V4L7 9H3zm18.3-1.7-1.4-1.4L17 8.6l-2.9-2.7-1.4 1.4L15.6 10l-2.9 2.9 1.4 1.4L17 11.4l2.9 2.9 1.4-1.4-2.9-2.9z"/>',
   transcript: '<path d="M4 5h16v2H4zm0 4h16v2H4zm0 4h10v2H4zm0 4h10v2H4z"/>',
   download: '<path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>',
+  cc: '<path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1z"/>',
   keyboard: '<path d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2zm0 3h2v2h-2zM8 8h2v2H8zm0 3h2v2H8zm-1 2H5v-2h2zm0-3H5V8h2zm9 7H8v-2h8zm0-4h-2v-2h2zm0-3h-2V8h2zm3 3h-2v-2h2zm0-3h-2V8h2z"/>',
   settings: '<path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>',
   sign: '<path d="M12.5 23c-3 0-5.7-1.8-6.8-4.6L3 11.6a.9.9 0 0 1 1.2-1.2l.7.2c.5.2.9.6 1.1 1.1L7.3 15H8V3.4a1.2 1.2 0 0 1 2.3 0V11h1V2.2a1.2 1.2 0 0 1 2.3 0V11h1V3.6a1.2 1.2 0 0 1 2.3 0V11h1V6.4a1.2 1.2 0 0 1 2.3 0v9.2c0 4.1-3.4 7.4-7.5 7.4z"/>',
@@ -78,12 +79,13 @@ const STYLE = `
 /* Take the host's look where it offers one (Bootstrap variables on Savanna), with our own fallbacks. */
 :host { display: block; font-family: var(--bs-body-font-family, system-ui, "Noto Sans"), "Noto Sans Ethiopic", "Nyala", "Abyssinica SIL", sans-serif;
   --ap-accent: var(--bs-primary, #0b5cad); --ap-bg: #ffffff; --ap-fg: #16181d; --ap-muted: #4a5060; --ap-line: #8a90a0; --ap-focus: #0b5cad;
-  --ap-panel: #f3f5f8; --ap-current: #fff1b8; color: var(--ap-fg); }
+  --ap-panel: #f3f5f8; --ap-current: #fff1b8; color: var(--ap-fg);
+  --ap-action: color-mix(in srgb, var(--bs-primary, #0b5cad) 78%, black); }
 :host([theme=dark]) { --ap-accent: #8cc4ff; --ap-bg: #15181e; --ap-fg: #eef0f4; --ap-muted: #b8bfcc; --ap-line: #7c8496; --ap-focus: #8cc4ff;
-  --ap-panel: #1f232b; --ap-current: #4a3f00; }
+  --ap-panel: #1f232b; --ap-current: #4a3f00; --ap-action: #1d5fa8; }
 @media (prefers-color-scheme: dark) {
   :host(:not([theme=light])) { --ap-accent: #8cc4ff; --ap-bg: #15181e; --ap-fg: #eef0f4; --ap-muted: #b8bfcc; --ap-line: #7c8496; --ap-focus: #8cc4ff;
-    --ap-panel: #1f232b; --ap-current: #4a3f00; }
+    --ap-panel: #1f232b; --ap-current: #4a3f00; --ap-action: #1d5fa8; }
 }
 /* Ethiopic needs more line height; never capitals or letter spacing. */
 .player:lang(am) { line-height: 1.7; }
@@ -111,7 +113,24 @@ video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .time { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ap-muted); font-size: 0.95rem; }
 input[type=range] { accent-color: var(--ap-accent); min-height: 44px; margin: 0; }
 .seek { flex: 1; min-width: 0; }
-.controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.25rem 0.5rem; padding: 0.25rem 0.5rem 0.5rem; }
+.controls { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.25rem 0.5rem 0.5rem; container-type: inline-size; }
+/* Three rows: watch, follow the lesson with, more. Equal-width buttons that wrap evenly on any screen. */
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(4.75rem, 1fr)); gap: 0.35rem; align-items: stretch; }
+.row.access { padding-top: 0.5rem; border-top: 1px solid var(--ap-line); grid-template-columns: repeat(var(--n, 4), 1fr); }
+/* Narrow players (phones): the ways to follow the lesson as an even 2 × 2. */
+@container (max-width: 28rem) { .row.access { grid-template-columns: repeat(2, 1fr); } }
+.row.more { padding-top: 0.5rem; border-top: 1px solid var(--ap-line); grid-template-columns: minmax(9rem, 2fr) repeat(auto-fit, minmax(6rem, 1fr)); align-items: end; }
+@media (max-width: 26rem) { .row.more { grid-template-columns: 1fr 1fr; } .row.more .lang-field { grid-column: 1 / -1; } }
+.row-label { grid-column: 1 / -1; font-size: 0.9rem; font-weight: 600; color: var(--ap-muted); }
+.row .ctl { width: 100%; min-height: 56px; border-color: var(--ap-line); background: var(--ap-bg); font-size: 0.85rem; }
+.lang-field select { width: 100%; }
+/* Play is the main action. Darkened host colour keeps white text readable. */
+.ctl.primary { background: var(--ap-action); border-color: var(--ap-action); color: #fff; font-weight: 600; }
+.ctl.primary:hover { background: var(--ap-action); filter: brightness(1.1); }
+/* On/off shown by more than colour: thicker border, bold, and a tick. */
+.ctl[aria-pressed=true] { border: 2px solid var(--ap-accent); background: var(--ap-panel); font-weight: 700; }
+/* Shown, not spoken: screen readers already say "pressed". */
+.ctl[aria-pressed=true] .lbl::before { content: "✓ " / ""; }
 .group { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.25rem; }
 .spacer { flex: 1 1 0; }
 button, select { font: inherit; color: inherit; }
@@ -147,7 +166,8 @@ dialog.help dt kbd { font-family: inherit; font-weight: 700; border: 1px solid v
 dialog.help dd { margin: 0; }
 .text-btn { min-height: 44px; padding: 0 1rem; border: 1px solid var(--ap-line); border-radius: 6px; background: var(--ap-bg); cursor: pointer; }
 .stage:focus-visible { outline: 3px solid #ffeb3b; outline-offset: -3px; }
-.sign-tools { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.5rem 0.5rem 0; }
+.sign-tools { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.sign-tools:not([hidden]) + .sign-off-hint, .sign-tools:not([hidden]) ~ .sign-off-hint { display: none; }
 .sign-tools[hidden] { display: none; }
 .sign-tools button { min-height: 44px; min-width: 44px; padding: 0 0.6rem; border: 1px solid var(--ap-line); border-radius: 6px; background: var(--ap-bg); cursor: pointer; font-size: 0.85rem; }
 .sign-tools button[aria-pressed=true] { border-color: var(--ap-accent); background: var(--ap-panel); font-weight: 600; }
@@ -379,11 +399,6 @@ class DbPlayer extends HTMLElement {
     <span id="ap-sign-help" class="sr-only">${t.signHelp}</span>` : ''}
   </div>
   <span id="ap-stage-hint" class="sr-only">${t.stageHint}</span>
-  ${hasSign ? `<div class="sign-tools" role="group" aria-label="${t.signTools}" hidden>
-    ${places.map((k) => `<button type="button" data-place="${k}" aria-pressed="false">${t.places[k]}</button>`).join('')}
-    <button type="button" data-grow="1">${t.larger}</button>
-    <button type="button" data-grow="-1">${t.smaller}</button>
-  </div>` : ''}
   ${m.describeAudio ? `<audio class="ad-audio" preload="none" crossorigin="anonymous" src="${escapeAttr(m.describeAudio)}"></audio>` : ''}
   <p class="note" role="status"></p>
   <p class="ad-text" aria-hidden="true" hidden></p>
@@ -392,64 +407,82 @@ class DbPlayer extends HTMLElement {
     <span class="time" aria-hidden="true"><span class="cur">0:00</span> / <span class="dur">${clock(m.duration)}</span></span>
   </div>
   <div class="controls">
-    <div class="group">
-      <button type="button" class="ctl play">${icon('play')}<span class="lbl">${t.play}</span></button>
+    <div class="row main">
+      <button type="button" class="ctl play primary">${icon('play')}<span class="lbl">${t.play}</span></button>
       <button type="button" class="ctl back">${icon('back')}<span class="lbl">${t.back}</span></button>
       <button type="button" class="ctl forward">${icon('forward')}<span class="lbl">${t.forward}</span></button>
-      <button type="button" class="ctl mute">${icon('volume')}<span class="lbl">${t.mute}</span></button>
-      <input class="volume" type="range" min="0" max="100" step="5" value="100" aria-label="${t.volume}">
+      ${document.fullscreenEnabled ? `<button type="button" class="ctl fs">${icon('fullscreen')}<span class="lbl">${t.fullscreen}</span></button>` : ''}
     </div>
-    <div class="spacer"></div>
-    <div class="group">
-      <div class="field"><label for="ap-lang">${t.languageLabel}</label>
+    <div class="row access" role="group" aria-labelledby="ap-follow" style="--n: ${hasAd ? 4 : 3}">
+      <span class="row-label" id="ap-follow">${t.followWith}</span>
+      <button type="button" class="ctl cc-btn" aria-pressed="false">${icon('cc')}<span class="lbl">${t.captions}</span></button>
+      <button type="button" class="ctl sign-btn" aria-pressed="false">${icon('sign')}<span class="lbl">${t.sign}</span></button>
+      ${hasAd ? `<button type="button" class="ctl ad-btn" aria-pressed="false">${icon('ad')}<span class="lbl">${t.ad}</span></button>` : ''}
+      <button type="button" class="ctl transcript-btn" aria-expanded="false" aria-controls="ap-transcript">${icon('transcript')}<span class="lbl">${t.showTranscript}</span></button>
+    </div>
+    <div class="row more">
+      <div class="field lang-field"><label for="ap-lang">${t.languageLabel}</label>
         <select id="ap-lang" class="lang-select">
           ${langs.map((code) => `<option value="${escapeAttr(code)}" lang="${escapeAttr(code)}"${code === this.uiLang ? ' selected' : ''}>${escapeHtml(languageName(code))}</option>`).join('')}
         </select>
       </div>
-      <div class="field"><label for="ap-cc-select">${t.captions}</label>
-        <select id="ap-cc-select" class="cc-select">
-          <option value="">${t.off}</option>
-          ${captionTracks.map((tr, i) => `<option value="${i}" lang="${escapeAttr(tr.srclang)}">${escapeHtml(tr.label)}</option>`).join('')}
-        </select>
-      </div>
-      ${hasAd ? `<div class="field"><label for="ap-ad-select">${t.ad}</label>
-        <select id="ap-ad-select" class="ad-select">
-          <option value="">${t.off}</option>
-          ${descTracks.map((tr, i) => `<option value="${i}" lang="${escapeAttr(tr.srclang)}">${escapeHtml(tr.label)}</option>`).join('')}
-          ${m.describeAudio ? `<option value="audio">${t.adAudio}</option>` : ''}
-        </select>
-      </div>` : ''}
-      <button type="button" class="ctl sign-btn" aria-pressed="false">${icon('sign')}<span class="lbl">${t.sign}</span></button>
-      <button type="button" class="ctl settings-btn" aria-expanded="false" aria-controls="ap-settings">${icon('settings')}<span class="lbl">${t.settings}</span></button>
-      <div class="field"><label for="ap-speed">${t.speed}</label>
-        <select id="ap-speed" class="speed">${SPEEDS.map((s) => `<option value="${s}"${s === 1 ? ' selected' : ''}>${s}×</option>`).join('')}</select>
-      </div>
-      ${qualities.length > 1 ? `<div class="field"><label for="ap-quality">${t.quality}</label>
-        <select id="ap-quality" class="quality">${qualities.map((q) => `<option value="${escapeAttr(q)}">${q === 'audio' ? t.audioOnly : escapeHtml(q)}</option>`).join('')}</select>
-      </div>` : ''}
-      <button type="button" class="ctl transcript-btn" aria-expanded="false" aria-controls="ap-transcript">${icon('transcript')}<span class="lbl">${t.showTranscript}</span></button>
       ${m.offline ? `<a class="ctl offline" href="${escapeAttr(m.offline)}" download>${icon('download')}<span class="lbl">${t.download}</span><span class="size"></span></a>` : ''}
-      ${document.fullscreenEnabled ? `<button type="button" class="ctl fs">${icon('fullscreen')}<span class="lbl">${t.fullscreen}</span></button>` : ''}
-      <button type="button" class="ctl help-btn" aria-haspopup="dialog">${icon('keyboard')}<span class="lbl">${t.keyboardHelp}</span></button>
+      <button type="button" class="ctl settings-btn" aria-expanded="false" aria-controls="ap-settings">${icon('settings')}<span class="lbl">${t.settings}</span></button>
     </div>
   </div>
   <div id="ap-settings" class="panel settings-panel" hidden>
     <fieldset>
-      <legend>${t.captionStyle}</legend>
+      <legend>${t.captions}</legend>
       <div class="style-grid">
+        <div class="field"><label for="ap-cc-select">${t.captionLanguage}</label>
+          <select id="ap-cc-select" class="cc-select">
+            <option value="">${t.off}</option>
+            ${captionTracks.map((tr, i) => `<option value="${i}" lang="${escapeAttr(tr.srclang)}">${escapeHtml(tr.label)}</option>`).join('')}
+          </select>
+        </div>
         <div class="field"><label for="ap-cc-size">${t.size}</label><select id="ap-cc-size" class="cc-size">${Object.keys(SIZES).map((k) => `<option value="${k}">${t.sizes[k]}</option>`).join('')}</select></div>
         <div class="field"><label for="ap-cc-colour">${t.textColour}</label><select id="ap-cc-colour" class="cc-colour">${Object.keys(COLOURS).map((k) => `<option value="${k}">${t.colours[k]}</option>`).join('')}</select></div>
         <div class="field"><label for="ap-cc-bg">${t.background}</label><select id="ap-cc-bg" class="cc-bg">${Object.keys(BACKGROUNDS).map((k) => `<option value="${k}">${t.backgrounds[k]}</option>`).join('')}</select></div>
         <div class="preview" aria-hidden="true"><span class="cc-text sample">${t.sample}</span></div>
       </div>
     </fieldset>
-    ${descTracks.length ? `<fieldset>
-      <legend>${t.ad}</legend>
-      <div class="style-grid">
-        <div class="field"><label for="ap-ad-mode">${t.adReadBy}</label><select id="ap-ad-mode" class="ad-mode">${Object.keys(t.adModes).map((k) => `<option value="${k}">${t.adModes[k]}</option>`).join('')}</select></div>
-        <label class="check"><input type="checkbox" class="ad-pause"> ${t.adPause}</label>
+    ${hasSign ? `<fieldset>
+      <legend>${t.signTools}</legend>
+      <p class="hint sign-off-hint">${t.signTurnOnFirst}</p>
+      <div class="sign-tools" hidden>
+        ${places.map((k) => `<button type="button" data-place="${k}" aria-pressed="false">${t.places[k]}</button>`).join('')}
+        <button type="button" data-grow="1">${t.larger}</button>
+        <button type="button" data-grow="-1">${t.smaller}</button>
       </div>
     </fieldset>` : ''}
+    ${hasAd ? `<fieldset>
+      <legend>${t.ad}</legend>
+      <div class="style-grid">
+        <div class="field"><label for="ap-ad-select">${t.adLanguage}</label>
+          <select id="ap-ad-select" class="ad-select">
+            <option value="">${t.off}</option>
+            ${descTracks.map((tr, i) => `<option value="${i}" lang="${escapeAttr(tr.srclang)}">${escapeHtml(tr.label)}</option>`).join('')}
+            ${m.describeAudio ? `<option value="audio">${t.adAudio}</option>` : ''}
+          </select>
+        </div>
+        ${descTracks.length ? `<div class="field"><label for="ap-ad-mode">${t.adReadBy}</label><select id="ap-ad-mode" class="ad-mode">${Object.keys(t.adModes).map((k) => `<option value="${k}">${t.adModes[k]}</option>`).join('')}</select></div>
+        <label class="check"><input type="checkbox" class="ad-pause"> ${t.adPause}</label>` : ''}
+      </div>
+    </fieldset>` : ''}
+    <fieldset>
+      <legend>${t.playback}</legend>
+      <div class="style-grid">
+        <div class="field"><label for="ap-speed">${t.speed}</label>
+          <select id="ap-speed" class="speed">${SPEEDS.map((x) => `<option value="${x}"${x === 1 ? ' selected' : ''}>${x}×</option>`).join('')}</select>
+        </div>
+        ${qualities.length > 1 ? `<div class="field"><label for="ap-quality">${t.quality}</label>
+          <select id="ap-quality" class="quality">${qualities.map((q) => `<option value="${escapeAttr(q)}">${q === 'audio' ? t.audioOnly : escapeHtml(q)}</option>`).join('')}</select>
+        </div>` : ''}
+        <button type="button" class="ctl mute">${icon('volume')}<span class="lbl">${t.mute}</span></button>
+        <div class="field"><label for="ap-volume">${t.volume}</label><input id="ap-volume" class="volume" type="range" min="0" max="100" step="5" value="100"></div>
+        <button type="button" class="ctl help-btn" aria-haspopup="dialog">${icon('keyboard')}<span class="lbl">${t.keyboardHelp}</span></button>
+      </div>
+    </fieldset>
   </div>
   <section id="ap-transcript" class="panel transcript" hidden aria-labelledby="ap-transcript-h">
     <h${level} id="ap-transcript-h">${t.transcript}</h${level}>
@@ -482,7 +515,7 @@ class DbPlayer extends HTMLElement {
       sign: $('.sign'), signVideo: $('.sign-video'), signResize: $('.sign-resize'), signBtn: $('.sign-btn'),
       signTools: $('.sign-tools'), note: $('.note'), adAudio: $('.ad-audio'),
       help: $('dialog.help'), helpBtn: $('.help-btn'), offline: $('.offline'), transcriptDl: $('.transcript-dl'),
-      langSelect: $('.lang-select'), adSelect: $('.ad-select'), adMode: $('.ad-mode'), adPause: $('.ad-pause'), adText: $('.ad-text'), adLive: $('.ad-live'),
+      langSelect: $('.lang-select'), adSelect: $('.ad-select'), ccBtn: $('.cc-btn'), adBtn: $('.ad-btn'), signOffHint: $('.sign-off-hint'), adMode: $('.ad-mode'), adPause: $('.ad-pause'), adText: $('.ad-text'), adLive: $('.ad-live'),
     };
     if (m.poster) els.stage.style.setProperty('--ap-poster', `url("${m.poster.replace(/["\\\n]/g, encodeURIComponent)}")`);
 
@@ -512,8 +545,9 @@ class DbPlayer extends HTMLElement {
       const adIndex = descTracks.findIndex((tr) => tr.srclang === this.#prefs.ad);
       els.adSelect.value = adIndex >= 0 ? String(adIndex) : '';
       this.#lastDescription = adIndex >= 0 ? adIndex : Math.max(0, descTracks.findIndex((tr) => tr.srclang === this.uiLang));
-      els.adMode.value = this.#prefs.adMode in t.adModes ? this.#prefs.adMode : 'sr';
-      els.adPause.checked = this.#prefs.adPause !== false;
+      if (els.adMode) els.adMode.value = this.#prefs.adMode in t.adModes ? this.#prefs.adMode : 'sr';
+      if (els.adPause) els.adPause.checked = this.#prefs.adPause !== false;
+      els.adBtn?.setAttribute('aria-pressed', String(els.adSelect.value !== ''));
     }
 
     // Sign language window: remembered size, position and on/off.
@@ -595,14 +629,17 @@ class DbPlayer extends HTMLElement {
     });
 
     els.ccSelect.addEventListener('change', () => this.#selectCaptions());
+    // One tap: captions and audio description come on in the learner's language.
+    els.ccBtn.addEventListener('click', () => this.#toggleCaptions());
+    els.adBtn?.addEventListener('click', () => this.#toggleDescriptions());
     els.langSelect.addEventListener('change', () => this.#setLanguage(els.langSelect.value));
     els.settingsBtn.addEventListener('click', () => this.#togglePanel(els.settingsBtn, els.settingsPanel));
     for (const sel of [els.ccSize, els.ccColour, els.ccBg]) sel.addEventListener('change', () => this.#applyCaptionStyle(true));
 
     if (els.adSelect) {
       els.adSelect.addEventListener('change', () => this.#selectDescriptions());
-      els.adMode.addEventListener('change', () => { this.#prefs.adMode = els.adMode.value; this.#savePrefs(); });
-      els.adPause.addEventListener('change', () => { this.#prefs.adPause = els.adPause.checked; this.#savePrefs(); });
+      els.adMode?.addEventListener('change', () => { this.#prefs.adMode = els.adMode.value; this.#savePrefs(); });
+      els.adPause?.addEventListener('change', () => { this.#prefs.adPause = els.adPause.checked; this.#savePrefs(); });
     }
 
     if (els.sign) this.#bindSign();
@@ -769,7 +806,10 @@ class DbPlayer extends HTMLElement {
     } else {
       els.signVideo.pause();
     }
-    if (announce) this.#announce(on ? this.t.signOn : this.t.signOff);
+    // Turning on: one visible hint, which is also announced (it says the window is on). Off: a short announcement.
+    if (els.note.textContent === this.t.signMoveHint) els.note.textContent = '';
+    if (on && announce) els.note.textContent = this.t.signMoveHint;
+    else if (announce) this.#announce(this.t.signOff);
   }
 
   #clearCaptionAvoid() {
@@ -905,7 +945,13 @@ class DbPlayer extends HTMLElement {
 
   #toggleDescriptions() {
     const sel = this.#els.adSelect;
-    sel.value = sel.value === '' ? (sel.querySelector(`option[value="${this.#lastDescription ?? 0}"]`) ? String(this.#lastDescription ?? 0) : sel.options[1].value) : '';
+    if (sel.value === '') {
+      const own = [...sel.options].findIndex((o) => o.lang === this.uiLang);
+      const last = sel.querySelector(`option[value="${this.#lastDescription ?? 0}"]`);
+      sel.value = own > 0 ? sel.options[own].value : (last ? last.value : sel.options[1].value);
+    } else {
+      sel.value = '';
+    }
     this.#selectDescriptions(true);
   }
 
@@ -913,6 +959,7 @@ class DbPlayer extends HTMLElement {
     const els = this.#els;
     this.#stopDescription();
     const value = els.adSelect.value;
+    els.adBtn?.setAttribute('aria-pressed', String(value !== ''));
     if (value === '') {
       this.#prefs.ad = null;
       if (announce) this.#announce(this.t.adOff);
@@ -1007,7 +1054,11 @@ class DbPlayer extends HTMLElement {
 
   #toggleCaptions() {
     const sel = this.#els.ccSelect;
-    if (sel.value === '') sel.value = String(this.#lastCaption ?? 0);
+    if (sel.value === '') {
+      // On in the learner's language when the lesson has it; otherwise the last one used.
+      const own = [...sel.options].findIndex((o) => o.lang === this.uiLang);
+      sel.value = own > 0 ? sel.options[own].value : String(this.#lastCaption ?? 0);
+    }
     else sel.value = '';
     this.#selectCaptions(true);
   }
@@ -1016,6 +1067,7 @@ class DbPlayer extends HTMLElement {
     const els = this.#els;
     const t = this.t;
     const value = els.ccSelect.value;
+    els.ccBtn?.setAttribute('aria-pressed', String(value !== ''));
     els.cc.textContent = '';
     if (value === '') {
       this.#prefs.captions = null;

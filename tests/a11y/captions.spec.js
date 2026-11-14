@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { openSettings, chooseCaptions, chooseDescriptions } from './helpers.js';
 
 test('caption editor: correct a line, problems explained and linked, save, learners see it', async ({ page }) => {
   test.skip(test.info().project.name === 'android', 'staff tool tested on desktop');
@@ -42,7 +43,7 @@ test('caption editor: correct a line, problems explained and linked, save, learn
   // The player shows the corrected line.
   await page.goto('/demo/?lesson=studio-test');
   const player = page.locator('db-player');
-  await player.getByLabel('Captions', { exact: true }).selectOption({ label: 'English' });
+  await chooseCaptions(player, { label: 'English' });
   await player.locator('video.main').evaluate((v) => { v.currentTime = 1; });
   await expect(player.locator('.cc-text:not(.sample)')).toContainText('corrected by a person');
 });
