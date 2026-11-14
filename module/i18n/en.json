@@ -1,0 +1,155 @@
+{
+  "player": "Video player",
+  "play": "Play",
+  "pause": "Pause",
+  "back": "Back 10 s",
+  "forward": "Forward 10 s",
+  "mute": "Mute",
+  "unmute": "Unmute",
+  "volume": "Volume",
+  "seek": "Position in video",
+  "captions": "Captions",
+  "off": "Off",
+  "captionStyle": "Caption style",
+  "size": "Text size",
+  "textColour": "Text colour",
+  "background": "Background",
+  "speed": "Speed",
+  "quality": "Quality",
+  "audioOnly": "Audio only",
+  "transcript": "Transcript",
+  "showTranscript": "Transcript",
+  "followAlong": "Follow along with the video",
+  "fullscreen": "Full screen",
+  "exitFullscreen": "Exit full screen",
+  "shortcuts": "Keyboard shortcuts",
+  "loading": "Loading video…",
+  "loadError": "The video could not be loaded. Check your connection and reload the page.",
+  "noTranscript": "No transcript is available for this video.",
+  "playing": "Playing",
+  "paused": "Paused",
+  "muted": "Muted",
+  "unmuted": "Sound on",
+  "captionsOff": "Captions off",
+  "of": "of",
+  "minutes": "{n} minutes",
+  "seconds": "{n} seconds",
+  "sample": "Captions look like this",
+  "sizes": {
+    "s": "Small",
+    "m": "Medium",
+    "l": "Large",
+    "xl": "Extra large",
+    "xxl": "Huge"
+  },
+  "colours": {
+    "white": "White",
+    "yellow": "Yellow",
+    "cyan": "Cyan",
+    "green": "Green",
+    "black": "Black"
+  },
+  "backgrounds": {
+    "black": "Black",
+    "translucent": "Black, see-through",
+    "white": "White",
+    "none": "None"
+  },
+  "settings": "Settings",
+  "download": "Download for offline",
+  "sign": "Sign language",
+  "signWindow": "Sign language window",
+  "signSize": "Window size",
+  "signPlace": "Position",
+  "signSizes": {
+    "s": "Small",
+    "m": "Medium",
+    "l": "Large",
+    "xl": "Extra large"
+  },
+  "places": {
+    "tr": "Top right",
+    "tl": "Top left",
+    "br": "Bottom right",
+    "bl": "Bottom left",
+    "beside": "Beside the video",
+    "custom": "Where I moved it"
+  },
+  "signHelp": "Drag to move. Or select the window and use the arrow keys to move it, and plus or minus to change its size.",
+  "signOn": "Sign language on",
+  "signOff": "Sign language off",
+  "ad": "Audio description",
+  "adReadBy": "Read descriptions with",
+  "adModes": {
+    "sr": "My screen reader",
+    "voice": "Device voice"
+  },
+  "adPause": "Pause the video while a description is read",
+  "description": "Description",
+  "adOff": "Audio description off",
+  "noVoice": "This device has no voice for this language. Descriptions go to your screen reader instead.",
+  "keys": [
+    [
+      "Space or K",
+      "Play or pause"
+    ],
+    [
+      "← →",
+      "Back or forward 5 seconds"
+    ],
+    [
+      "J / L",
+      "Back or forward 10 seconds"
+    ],
+    [
+      "M",
+      "Mute or unmute"
+    ],
+    [
+      "C",
+      "Captions on or off"
+    ],
+    [
+      "D",
+      "Audio description on or off"
+    ],
+    [
+      "S",
+      "Sign language window on or off"
+    ],
+    [
+      "T",
+      "Show or hide transcript"
+    ],
+    [
+      "F",
+      "Full screen"
+    ],
+    [
+      "?",
+      "Keyboard help"
+    ],
+    [
+      "Arrow keys (sign window selected)",
+      "Move the sign language window"
+    ],
+    [
+      "+ − (sign window selected)",
+      "Larger or smaller sign language window"
+    ]
+  ],
+  "minute": "{n} minute",
+  "second": "{n} second",
+  "video": "Video",
+  "stageHint": "Space or K: play or pause. Left and right arrows: back or forward 5 seconds.",
+  "keyboardHelp": "Keyboard help",
+  "close": "Close",
+  "larger": "Larger",
+  "smaller": "Smaller",
+  "signNone": "There is no sign language video for this lesson yet. Captions and the transcript are available.",
+  "downloadTranscript": "Download transcript (text)",
+  "sizeMB": "{size} MB",
+  "adAudio": "Described audio",
+  "signTools": "Sign window position and size",
+  "languageLabel": "Language / ቋንቋ"
+}

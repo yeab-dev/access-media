@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseVtt, isValidVtt, renderTranscriptHtml } from '../../server/vtt.js';
+import { parseVtt, isValidVtt, renderTranscriptHtml } from '../../api/vtt.js';
 
-const en = readFileSync(new URL('../../data/seed/demo/captions.en.vtt', import.meta.url), 'utf8');
-const am = readFileSync(new URL('../../data/seed/demo/captions.am.vtt', import.meta.url), 'utf8');
+const en = readFileSync(new URL('../../demo/data/lessons/demo/lesson.en.vtt', import.meta.url), 'utf8');
+const am = readFileSync(new URL('../../demo/data/lessons/demo/lesson.am.vtt', import.meta.url), 'utf8');
 
 test('demo caption files are valid WebVTT with matching cue counts', () => {
   assert.ok(isValidVtt(en));

@@ -48,7 +48,7 @@ Career gateway (required for Track 2): **accessible job card with an audio summa
 - Level 2: REST API with an OpenAPI spec.
 - Level 3: open standard (we use WebVTT, schema.org VideoObject/JobPosting, Open Badges 3.0).
 - Test: a judge installs the module **in one hour from the docs alone**. Must also run inside the Savanna starter (ALX learning platform).
-- **Savanna starter = https://github.com/alx-africa/Savanna-static-pages** (3 frozen static pages). It is **only a demo host** — we do not build on it or modify its files. Per the Technical Guide, the repo carries it as `savanna/` (**unchanged**, plus our script tag) so the judge sees the Level 1 proof inside Savanna next to `demo/blank.html`. (Until the repo is restructured, `npm run savanna` serves `../Savanna-static-pages` with the player injected.)
+- **Savanna starter = https://github.com/alx-africa/Savanna-static-pages** (3 frozen static pages). It is **only a demo host** — we do not build on it or modify its files. Per the Technical Guide, the repo carries it as `savanna/` (**unchanged**, plus our script tag) so the judge sees the Level 1 proof inside Savanna next to `demo/blank.html`. 
 
 ## Gate (pass/fail — a module that fails is not scored)
 
@@ -113,24 +113,27 @@ POST /api/badges (admin)         GET  /api/badges/{id}
 
 ## Current status
 
-- **Step 1 done (player):** `public/access-player.js` — keyboard + screen reader controls, EN/AM captions drawn by the player with size/colour/background settings, transcript panel (lines seek), speed, quality (360p/240p/audio, auto 240p on slow connections), fullscreen, shortcuts K/J/L/M/C/T/F, EN/AM interface, prefs in localStorage. Demo page `public/index.html`.
-- Server (minimal so far): `server/index.js` serves `/player/*`, `/media/*`, `GET /api/media/:id` (manifest from `data/media/<id>/manifest.json`), `/api/health`. `server/vtt.js` parses VTT and renders transcript HTML (not wired to a route yet).
-- Demo lesson: `data/seed/demo/` (captions, manifest) → `scripts/make-demo.sh` builds `data/media/demo/` with ffmpeg (silent placeholder slides). Amharic captions and UI strings are drafts needing native review.
-- Tests: `npm test` (unit), `npm run a11y` (Playwright + axe, desktop and Pixel 7 profiles; uses system Chromium because Playwright's bundled one can't play H.264). 24 browser + 8 unit passing (offline pack download → unzip → open from file://, sign window move/resize/sync, AD announce/pause/resume, Amharic lang, transcript descriptions included).
-- Phone testing: `adb reverse tcp:8080 tcp:8080`, then http://localhost:8080 on the phone (ufw blocks 8080 on the LAN).
-- **Step 2 done (sign language + audio description):** sign window is a muted second video synced to the lesson (drift > 0.3 s corrected), loaded only when turned on; move by drag, arrow keys (Shift = bigger steps) or corner presets; resize by corner handle, +/− or size menu; "Beside the video" layout; prefs saved. Audio description from `descriptions.<lang>.vtt`: default sent to an `aria-live=assertive` region with correct `lang` (screen reader), optional device voice (speechSynthesis, falls back if no voice for that language); "pause while described" on by default (resume after estimated reading time, or on speech end); visible description text below video; descriptions merged into the transcript. Shortcuts D and S. Caption style moved into one Settings panel (captions / sign window / audio description fieldsets).
-- Player size: ~56 KB raw, ~16 KB gzipped.
-- Demo sign video is a placeholder with a timecode (main video has one too) to check sync by eye. Replace with a real ESL recording.
-- **Step 3 done (offline pack):** `server/offline.js` + `GET /api/media/:id/offline.zip`. Pack = `lesson.mp4` (240p), `lesson.mp3`, `lesson.<lang>.vtt` (VLC auto-loads), `descriptions/*.vtt`, self-contained `index.html` (captions embedded as data: URLs so they work from file://; transcripts per language with descriptions; no network requests), bilingual `README.txt`. Built on first request, cached as `data/media/<id>/offline.zip`, rebuilt when inputs or `offline.js` change; served with Range (resumable on 3G). Player shows a "Download for offline" link (manifest `offline` field). Demo pack ≈ 418 KB.
-- Ethiopic text is never italicised (no true italic; slanted script is harder to read).
-- Next: step 4 (career gateway: job card with audio summary, Open Badges 3.0).
-- Update this section as work lands.
+Repo layout follows the Technical Guide: `module/` (db-player.js + i18n/en.json, am.json), `api/` (Express: index.js, vtt.js, offline.js), `demo/` (index.html, blank.html, data/lessons/demo = seed captions/descriptions/manifest), `savanna/` (starter copied unchanged + 3 added lines in concept-with-navigation.html: script tag, and `<db-player lesson="demo" theme="light">` under the banner inside `.savanna-styles`), `scripts/make-demo.sh` → builds media into `data/lessons/demo/` (gitignored), `tests/unit`, `tests/a11y`.
+
+Done:
+- **`<db-player>`** (`module/db-player.js`): Level 1 attribute mode (`src`, `captions` — language from file name `lesson.am.vtt`, `sign`, `describe` .vtt and/or .mp3 described-audio track, `poster`, `label`) or API mode (`lesson`, `api`). `lang` loads `i18n/<lang>.json` (English fills gaps; unknown language → English). `theme` auto|light|dark; reads `--bs-primary`, `--bs-body-font-family`. Events (bubbles+composed): ready, progress (~every 5 s, on pause/end), complete, prefs (learner changes only), sign-requested.
+- **One language switch** ("Language / ቋንቋ", labelled in both): changes interface + captions + audio description (if on) together; remembered on the device and wins over the host's `lang` attribute; focus stays on the switch and the change is announced. Host pages must not add their own language buttons.
+- Keyboard: Space/K, ←/→ ±5 s (video area is focusable, role=group), J/L ±10 s, M, C, D, S, T, F, ? opens Keyboard help `<dialog>` (Escape closes, focus returns).
+- Captions EN/AM drawn by the player; size/colour/background in Settings; captions move aside when the sign window overlaps them. Amharic line-height 1.7, never italic.
+- Sign window: synced, default large; buttons Top left/right, Bottom left/right, Beside the video, Larger, Smaller (+ drag, arrows, +/−); defaults to "beside" on narrow screens. No sign video → visible message + `db-player:sign-requested`.
+- Audio description: text tracks (screen reader live region or device voice, pause while read) or `.mp3` described-audio track synced to the video.
+- Transcript panel (seek buttons, follow along) + "Download transcript (text)".
+- Offline: "Download for offline (0.4 MB)" — size shown before tapping — downloads the offline pack zip.
+- API v1: `GET /api/v1/health`, `/lessons`, `/lessons/{id}` (absolute URLs + links), `/lessons/{id}/transcript?lang=&format=html|txt`, `/lessons/{id}/offline-pack`. Errors 400/404 with a message in words.
+- Tests: 12 unit + 36 browser (desktop + Pixel 7), axe clean incl. blank page and Savanna mount.
+
+Not done yet (see Technical Guide): service-worker offline (needs HTTPS), caption editor (draft → correct → VTT), `POST /lessons/{id}/captions`, documents (tagged PDF + clean HTML with image descriptions), career gateway (`savanna/pages/jobs.html`, job card "Listen to summary", certificate page / Open Badges 3.0, JobPosting JSON-LD), Docker Compose, openapi.yaml + /docs, webhook, README, CONFORMANCE.md, Slow 3G measurement. Real ESL clip and native Amharic review still needed.
 
 ## Commands
 
 ```
-./scripts/make-demo.sh   # build demo media (needs ffmpeg) — run once
-npm run dev     # server with reload on http://localhost:8080
+npm run demo-media   # build demo media into data/lessons/demo (needs ffmpeg) — run once
+npm run dev     # server with reload on http://localhost:8080 → /demo/, /demo/blank.html, /savanna/pages/concept-with-navigation.html
 npm test        # unit tests (node --test tests/unit/)
 npm run a11y    # Playwright + axe-core
 ```
