@@ -17,22 +17,7 @@
  * Interface text lives in i18n/<lang>.json: adding a language is one new file. No framework, no build step.
  */
 
-const I18N = new Map();
-function fetchStrings(code) {
-  if (!I18N.has(code)) {
-    I18N.set(code, fetch(new URL(`./i18n/${code}.json`, import.meta.url))
-      .then((r) => (r.ok ? r.json() : null)).catch(() => null));
-  }
-  return I18N.get(code);
-}
-/** Strings for a language, with English filling any gaps. Falls back to English if the file is missing. */
-async function loadStrings(lang) {
-  const code = String(lang || 'en').toLowerCase().split('-')[0];
-  const [en, own] = await Promise.all([fetchStrings('en'), code === 'en' ? null : fetchStrings(code)]);
-  if (!en && !own) throw new Error('db-player: could not load interface text (i18n/*.json)');
-  return own ? { lang: code, t: { ...en, ...own } } : { lang: 'en', t: en };
-}
-const fill = (template, values) => String(template ?? '').replace(/\{(\w+)\}/g, (_, k) => values[k] ?? '');
+import { loadPrefs, storePrefs, loadStrings, fill, languageName, preferredLanguage, setPreferredLanguage } from './i18n.js';
 
 const SIZES = { s: 0.75, m: 1, l: 1.5, xl: 2, xxl: 3 };
 const COLOURS = { white: '#ffffff', yellow: '#ffeb3b', cyan: '#4dd0e1', green: '#69f0ae', black: '#000000' };
@@ -42,7 +27,6 @@ const SIGN_SIZES = { s: 0.2, m: 0.28, l: 0.38, xl: 0.5 }; // fraction of the vid
 const SIGN_MIN = 0.12;
 const SIGN_MAX = 0.7;
 const SIGN_MARGIN = 8; // px from the video edge for corner positions
-const STORE_KEY = 'db-player:prefs';
 
 const ICONS = {
   play: '<path d="M8 5v14l11-7z"/>',
@@ -66,13 +50,6 @@ const scriptOrigin = new URL(import.meta.url).origin;
 
 // Some browsers load the voice list lazily; ask early so it is ready when needed.
 if ('speechSynthesis' in window) speechSynthesis.getVoices();
-
-function loadPrefs() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
-}
-function storePrefs(prefs) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(prefs)); } catch { /* private mode: ignore */ }
-}
 
 function clock(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
@@ -241,6 +218,7 @@ class DbPlayer extends HTMLElement {
 
   /** Save preferences on this device and tell the host what changed. */
   #savePrefs() {
+    this.#prefs = { ...loadPrefs(), ...this.#prefs, lang: loadPrefs().lang ?? this.#prefs.lang };
     storePrefs(this.#prefs);
     if (this.#settingUp) return;
     const p = this.#prefs;
@@ -253,8 +231,15 @@ class DbPlayer extends HTMLElement {
 
   #onFullscreen = () => this.#updateFullscreen();
 
+  #announcingLanguage = false;
+  #onLanguage = (e) => {
+    if (this.#announcingLanguage || !this.#manifest || e.detail.lang === this.uiLang) return;
+    this.#setLanguage(e.detail.lang, false);
+  };
+
   connectedCallback() {
     this.#connected = true;
+    document.addEventListener('db:language', this.#onLanguage);
     document.addEventListener('fullscreenchange', this.#onFullscreen);
     this.#load();
   }
@@ -262,18 +247,19 @@ class DbPlayer extends HTMLElement {
   disconnectedCallback() {
     this.#connected = false;
     document.removeEventListener('fullscreenchange', this.#onFullscreen);
+    document.removeEventListener('db:language', this.#onLanguage);
     this.#resizeObserver?.disconnect();
     this.#stopDescription();
     this.#els.video?.pause();
   }
 
   /** The learner's own language choice wins over the host's default (the lang attribute). */
-  #wantedLang() { return this.#prefs.lang || this.getAttribute('lang') || 'en'; }
+  #wantedLang() { return preferredLanguage(this.getAttribute('lang')); }
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (!this.#connected || oldValue === newValue) return;
     if (name === 'lang' && this.#manifest) {
-      if (this.#prefs.lang) return; // the learner already chose a language
+      if (loadPrefs().lang) return; // the learner already chose a language
       loadStrings(newValue).then(({ lang, t }) => { this.#t = t; this.#uiLang = lang; this.#render(this.#manifest, true); });
     } else {
       this.#load();
@@ -888,10 +874,16 @@ class DbPlayer extends HTMLElement {
    * One switch for language: the interface, and captions and audio description if they are on,
    * all move to the chosen language. Remembered on this device.
    */
-  async #setLanguage(code) {
+  async #setLanguage(code, fromThisPlayer = true) {
     const m = this.#manifest;
     const has = (kind) => m.tracks.some((tr) => tr.kind === kind && tr.srclang === code);
-    this.#prefs.lang = code;
+    this.#prefs = { ...this.#prefs, lang: code };
+    if (fromThisPlayer) {
+      // Tell the other components, without reacting to our own announcement.
+      this.#announcingLanguage = true;
+      setPreferredLanguage(code);
+      this.#announcingLanguage = false;
+    }
     if (this.#prefs.captions && has('captions')) this.#prefs.captions = code;
     if (this.#prefs.ad && has('descriptions')) this.#prefs.ad = code;
     const { lang, t } = await loadStrings(code);
@@ -899,6 +891,7 @@ class DbPlayer extends HTMLElement {
     this.#render(m, true);
     this.#savePrefs();
     // The controls were redrawn in the new language: keep the learner's place and say what changed.
+    if (!fromThisPlayer) return;
     this.#els.langSelect.focus();
     this.#announce(`${t.languageLabel}: ${languageName(code)}`);
   }
@@ -1202,10 +1195,6 @@ class DbPlayer extends HTMLElement {
   }
 }
 
-/** A language's name in that language: "English", "አማርኛ". */
-function languageName(code) {
-  try { return new Intl.DisplayNames([code], { type: 'language' }).of(code) || code; } catch { return code; }
-}
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 /** Keep a second media element (sign video, described audio) in step with the lesson video. */
 function follow(main, el, force) {

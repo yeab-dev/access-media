@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { ensureOfflinePack } from './offline.js';
 import { parseVtt, renderTranscriptHtml, formatClock } from './vtt.js';
 import { signRouter, adminToken } from './sign.js';
+import { jobsRouter } from './jobs.js';
+import { certificatesRouter } from './certificates.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -139,7 +141,23 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
 });
 
 api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
+api.use(jobsRouter({ jobsFile: path.resolve(process.env.JOBS_FILE || path.join(ROOT, 'demo', 'data', 'jobs.json')) }));
+const certificates = certificatesRouter({ dataDir: DATA_DIR, publicUrl: process.env.PUBLIC_URL });
+api.use(certificates.api);
 app.use('/api/v1', api);
+app.use(certificates.pages);
+
+/** A test certificate so the jobs page has something to share. Fixed id: demo-learner. */
+export async function ensureDemoCertificate(port = PORT) {
+  const file = path.join(DATA_DIR, 'certificates', 'demo-learner.json');
+  if (await readFile(file).then(() => true, () => false)) return;
+  const req = { protocol: 'http', get: () => `localhost:${port}` };
+  await certificates.issue(req, {
+    id: 'demo-learner',
+    learnerName: 'Test Learner',
+    achievement: { id: 'demo', name: 'How to write a CV', description: 'Digital Bridge lesson: writing a CV for your first job.' },
+  });
+}
 
 app.use((err, req, res, _next) => {
   if (err.status === 404 || err.statusCode === 404) return res.status(404).end();
@@ -149,5 +167,6 @@ app.use((err, req, res, _next) => {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   adminToken();
+  await ensureDemoCertificate();
   app.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
 }

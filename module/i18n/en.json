@@ -152,5 +152,29 @@
   "adAudio": "Described audio",
   "signTools": "Sign window position and size",
   "languageLabel": "Language / ቋንቋ",
-  "signRequested": "We have told the lesson team that you want sign language for this lesson."
+  "signRequested": "We have told the lesson team that you want sign language for this lesson.",
+  "jobListen": "Listen to summary",
+  "jobStop": "Stop listening",
+  "jobWhere": "Where",
+  "jobType": "Type",
+  "jobPosted": "Posted",
+  "jobCloses": "Apply by",
+  "jobSupport": "Support this employer offers",
+  "jobApply": "Apply",
+  "jobRemote": "Remote: work from home",
+  "jobLoadError": "This job could not be loaded.",
+  "jobNoVoice": "This phone has no voice for this language, so the summary cannot be read aloud. It is written above.",
+  "employmentTypes": {
+    "FULL_TIME": "Full time",
+    "PART_TIME": "Part time",
+    "CONTRACTOR": "Contract",
+    "INTERN": "Internship"
+  },
+  "supportTypes": {
+    "interpreter": "Sign language interpreter for interviews",
+    "remote": "Work from home",
+    "flexible-hours": "Flexible hours",
+    "screen-reader": "Screen reader friendly tools",
+    "step-free": "Step-free office"
+  }
 }

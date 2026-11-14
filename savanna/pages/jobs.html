@@ -1,0 +1,112 @@
+<!doctype html>
+<!--
+  Concept page with curriculum navigation
+  "The Future of the VA Industry" — module 2, navigation panel showing read, current and unread activities.
+  Frozen from the local Savanna dev app; see ../README.md.
+-->
+<html lang="en">
+  <head>
+    <style class="vjs-styles-defaults">
+      .video-js {
+        width: 300px;
+        height: 150px;
+      }
+
+      .vjs-fluid:not(.vjs-audio-only-mode) {
+        padding-top: 56.25%;
+      }
+    </style>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="" />
+    <meta name="google" content="notranslate" />
+
+    <!-- Google Tag Manager -->
+
+    <!-- End Google Tag Manager -->
+
+    <title>Jobs for Digital Bridge graduates | Savanna</title>
+
+    <link rel="stylesheet" href="../assets/css/typekit-xgz4ilr-css.css" />
+    <link rel="stylesheet" href="../assets/css/application_alx.css" media="all" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon_alx.ico" />
+
+    <link rel="apple-touch-icon" href="/apple-touch-icon_alx.png" />
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- React -->
+
+    <link rel="stylesheet" href="../assets/css/app.css" media="all" />
+
+    <link rel="stylesheet" href="../assets/css/static-page.css" media="all" />
+      <!-- Digital Bridge Track 2 career gateway: our two scripts. Everything else on this page is plain Savanna markup and styles. -->
+  <script type="module" src="/module/db-job-card.js"></script>
+  <style>
+    .db-jobs { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); }
+    .db-skip { position: absolute; left: -999px; }
+    .db-skip:focus { left: 1rem; top: 1rem; z-index: 10; background: #fff; padding: 0.5rem 1rem; }
+    .db-cert { border: 1px solid #8a90a0; border-radius: 8px; padding: 1rem 1.25rem; max-width: 40rem; }
+    .db-cert button, .db-cert a { min-height: 44px; }
+    /* Savanna's red (#db3e3e) is 4.4:1 on white, under the 4.5:1 text minimum: use a darker shade here. */
+    .db-cert a { color: #ad2d2d; }
+    .db-cert .btn-outline-primary { color: #ad2d2d; border-color: #ad2d2d; }
+    .db-cert .btn-outline-primary:hover, .db-cert .btn-outline-primary:focus-visible { color: #fff; background: #ad2d2d; }
+  </style>
+  </head>
+  <body>
+    <a class="db-skip" href="#content">Skip to content</a>
+    <main class="container-xl py-4" id="content">
+      <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+        <div>
+          <h1 class="mb-1">Jobs for Digital Bridge graduates</h1>
+          <p class="mb-0">Test jobs for the hackathon demo. These employers are not real.</p>
+        </div>
+        <db-language></db-language>
+      </div>
+
+      <section aria-labelledby="h-jobs" class="mb-5">
+        <h2 id="h-jobs" class="h4">Open jobs</h2>
+        <div class="db-jobs" id="jobs"></div>
+      </section>
+
+      <section aria-labelledby="h-cert" class="db-cert">
+        <h2 id="h-cert" class="h4">Share your certificate</h2>
+        <p>Employers can open this link to check that your certificate is real. They do not need an account.</p>
+        <p class="mb-2"><strong>How to write a CV</strong> &middot; Test Learner</p>
+        <p class="mb-2"><a id="cert-link" href="/certificates/demo-learner">Open the certificate check page</a></p>
+        <button type="button" class="btn btn-outline-primary" id="copy">Copy the link</button>
+        <p id="copy-status" role="status" class="mt-2 mb-0"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      // The host decides how jobs are listed; each one is a <db-job-card>, plus JSON-LD for job search engines.
+      const jobs = (await (await fetch('/api/v1/jobs')).json()).jobs;
+      const list = document.getElementById('jobs');
+      for (const job of jobs) {
+        const card = document.createElement('db-job-card');
+        card.setAttribute('job', job.id);
+        card.setAttribute('theme', 'light');
+        list.append(card);
+        const ld = document.createElement('script');
+        ld.type = 'application/ld+json';
+        ld.textContent = JSON.stringify(job.jsonLd);
+        document.head.append(ld);
+      }
+      document.getElementById('copy').addEventListener('click', async () => {
+        const url = new URL(document.getElementById('cert-link').getAttribute('href'), location.href).href;
+        const status = document.getElementById('copy-status');
+        try { await navigator.clipboard.writeText(url); status.textContent = 'Link copied. Paste it into your message to the employer.'; }
+        catch { status.textContent = `Copy this link: ${url}`; }
+      });
+    </script>
+  </body>
+</html>
