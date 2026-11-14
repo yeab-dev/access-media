@@ -42,12 +42,32 @@ app.get('/api/media/:id', cors, async (req, res) => {
     manifest.poster = abs(manifest.poster);
     manifest.sources = (manifest.sources || []).map((s) => ({ ...s, src: abs(s.src) }));
     manifest.tracks = (manifest.tracks || []).map((t) => ({ ...t, src: abs(t.src) }));
+    if (manifest.sign) manifest.sign = { ...manifest.sign, src: abs(manifest.sign.src) };
     res.json(manifest);
   } catch (err) {
     if (err.code === 'ENOENT') return res.status(404).json({ error: 'not_found' });
     throw err;
   }
 });
+
+// Savanna integration preview. Point SAVANNA_DIR at a checkout of alx-africa/Savanna-static-pages.
+// The concept page gets the player inserted where Savanna would render a `::video <id> ::` directive.
+// (We serve the local checkout rather than copying Savanna's files into this repo: it has no licence.)
+const SAVANNA_DIR = process.env.SAVANNA_DIR ? path.resolve(process.env.SAVANNA_DIR) : null;
+if (SAVANNA_DIR) {
+  app.get('/savanna/pages/concept-with-navigation.html', async (req, res) => {
+    const media = ID.test(String(req.query.media || '')) ? req.query.media : 'demo';
+    let html = await readFile(path.join(SAVANNA_DIR, 'pages', 'concept-with-navigation.html'), 'utf8');
+    const content = /(<div class="gap formatted-content[^"]*">)/;
+    if (!content.test(html)) console.warn('Savanna page changed: could not find the concept content area');
+    html = html
+      .replace('</head>', '  <script type="module" src="/player/access-player.js"></script>\n</head>')
+      .replace(content, `$1\n<access-player media="${media}" heading-level="2"></access-player>`);
+    res.type('html').send(html);
+  });
+  app.get(['/savanna', '/savanna/'], (_req, res) => res.redirect('/savanna/pages/concept-with-navigation.html'));
+  app.use('/savanna', express.static(SAVANNA_DIR));
+}
 
 app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'public', 'index.html')));
 

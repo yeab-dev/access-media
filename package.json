@@ -11,7 +11,8 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test \"tests/unit/**/*.test.js\"",
-    "a11y": "playwright test"
+    "a11y": "playwright test",
+    "savanna": "SAVANNA_DIR=../Savanna-static-pages node --watch server/index.js"
   },
   "dependencies": {
     "express": "^5.3.0",
