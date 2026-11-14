@@ -8,8 +8,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node api/index.js",
-    "dev": "node --watch api/index.js",
+    "start": "node --env-file-if-exists=.env api/index.js",
+    "dev": "node --env-file-if-exists=.env --watch api/index.js",
     "demo-media": "./scripts/make-demo.sh",
     "test": "node --test \"tests/unit/**/*.test.js\"",
     "a11y": "playwright test"

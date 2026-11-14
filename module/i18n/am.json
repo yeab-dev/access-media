@@ -151,5 +151,6 @@
   "sizeMB": "{size} ሜባ",
   "adAudio": "የተገለጸ ድምፅ",
   "signTools": "የምልክት መስኮት ቦታ እና መጠን",
-  "languageLabel": "ቋንቋ / Language"
+  "languageLabel": "ቋንቋ / Language",
+  "signRequested": "ለዚህ ትምህርት የምልክት ቋንቋ እንደሚፈልጉ ለትምህርቱ ቡድን አሳውቀናል።"
 }

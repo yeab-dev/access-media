@@ -11,7 +11,13 @@ export default defineConfig({
   timeout: 30_000,
   use: { baseURL: 'http://localhost:8090', launchOptions },
   webServer: {
-    command: 'PORT=8090 node api/index.js',
+    command: [
+      'rm -rf .test-data && mkdir -p .test-data && cp -r data/lessons .test-data/',
+      // A second copy of the demo for the sign studio test, so recordings never touch the lesson other tests use.
+      'cp -r .test-data/lessons/demo .test-data/lessons/studio-test',
+      `sed -i 's/"id": "demo"/"id": "studio-test"/; s/How to write a CV/Studio test lesson/' .test-data/lessons/studio-test/manifest.json`,
+      'DATA_DIR=.test-data ADMIN_TOKEN=test-code PORT=8090 node api/index.js',
+    ].join(' && '),
     url: 'http://localhost:8090/api/v1/health',
     reuseExistingServer: !process.env.CI,
   },
