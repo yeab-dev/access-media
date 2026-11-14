@@ -1,0 +1,62 @@
+{
+  "note": "Test data only. These employers and jobs are not real.",
+  "jobs": [
+    {
+      "id": "junior-frontend",
+      "datePosted": "2026-11-14",
+      "validThrough": "2026-12-15",
+      "employmentType": "FULL_TIME",
+      "remote": true,
+      "employer": "Test Employer PLC",
+      "city": "Addis Ababa",
+      "apply": "mailto:jobs@example.com?subject=Junior%20Front-End%20Developer",
+      "support": ["interpreter", "remote", "flexible-hours", "screen-reader"],
+      "en": {
+        "title": "Junior Front-End Developer",
+        "summary": "Build and fix web pages for our clients using HTML, CSS and JavaScript. You work from home with a mentor. Training is provided in the first month."
+      },
+      "am": {
+        "title": "ጀማሪ የድር ገጽ ገንቢ",
+        "summary": "HTML፣ CSS እና JavaScript በመጠቀም ለደንበኞቻችን የድር ገጾችን ይገነባሉ እንዲሁም ያስተካክላሉ። ከቤትዎ ሆነው ከአማካሪ ጋር ይሠራሉ። በመጀመሪያው ወር ስልጠና ይሰጣል።"
+      }
+    },
+    {
+      "id": "virtual-assistant",
+      "datePosted": "2026-11-10",
+      "validThrough": "2026-11-30",
+      "employmentType": "PART_TIME",
+      "remote": true,
+      "employer": "Test Small Business",
+      "city": "Addis Ababa",
+      "apply": "mailto:hello@example.com?subject=Virtual%20Assistant",
+      "support": ["remote", "flexible-hours"],
+      "en": {
+        "title": "Virtual Assistant",
+        "summary": "Manage email, calendars and documents for a small business. Part time, in the mornings. You need a phone or laptop and a reliable connection."
+      },
+      "am": {
+        "title": "ምናባዊ ረዳት",
+        "summary": "ለአንድ አነስተኛ ድርጅት ኢሜይል፣ የቀን መቁጠሪያ እና ሰነዶችን ያስተዳድራሉ። የትርፍ ሰዓት፣ በጠዋት። ስልክ ወይም ላፕቶፕ እና አስተማማኝ ግንኙነት ያስፈልግዎታል።"
+      }
+    },
+    {
+      "id": "customer-support",
+      "datePosted": "2026-11-12",
+      "validThrough": "2026-12-05",
+      "employmentType": "FULL_TIME",
+      "remote": false,
+      "employer": "Test Support Services",
+      "city": "Hawassa",
+      "apply": "mailto:careers@example.com?subject=Customer%20Support%20Agent",
+      "support": ["interpreter", "step-free", "screen-reader"],
+      "en": {
+        "title": "Customer Support Agent",
+        "summary": "Answer customer questions by chat and email in Amharic and English. Work in our step-free Hawassa office. Shifts are agreed with you."
+      },
+      "am": {
+        "title": "የደንበኞች አገልግሎት ሠራተኛ",
+        "summary": "የደንበኞችን ጥያቄዎች በቻት እና በኢሜይል በአማርኛ እና በእንግሊዝኛ ይመልሳሉ። ደረጃ በሌለው የሐዋሳ ቢሮአችን ይሠራሉ። የሥራ ፈረቃዎች ከእርስዎ ጋር ይወሰናሉ።"
+      }
+    }
+  ]
+}

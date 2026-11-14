@@ -152,5 +152,29 @@
   "adAudio": "የተገለጸ ድምፅ",
   "signTools": "የምልክት መስኮት ቦታ እና መጠን",
   "languageLabel": "ቋንቋ / Language",
-  "signRequested": "ለዚህ ትምህርት የምልክት ቋንቋ እንደሚፈልጉ ለትምህርቱ ቡድን አሳውቀናል።"
+  "signRequested": "ለዚህ ትምህርት የምልክት ቋንቋ እንደሚፈልጉ ለትምህርቱ ቡድን አሳውቀናል።",
+  "jobListen": "ማጠቃለያውን አዳምጥ",
+  "jobStop": "ማዳመጥ አቁም",
+  "jobWhere": "ቦታ",
+  "jobType": "ዓይነት",
+  "jobPosted": "የወጣበት ቀን",
+  "jobCloses": "የማመልከቻ የመጨረሻ ቀን",
+  "jobSupport": "ይህ ቀጣሪ የሚሰጠው ድጋፍ",
+  "jobApply": "አመልክት",
+  "jobRemote": "ከርቀት፦ ከቤት መሥራት",
+  "jobLoadError": "ይህ ሥራ ሊጫን አልቻለም።",
+  "jobNoVoice": "ይህ ስልክ ለዚህ ቋንቋ ድምፅ የለውም፤ ስለዚህ ማጠቃለያው ጮክ ብሎ ሊነበብ አይችልም። ከላይ ተጽፏል።",
+  "employmentTypes": {
+    "FULL_TIME": "ሙሉ ጊዜ",
+    "PART_TIME": "የትርፍ ሰዓት",
+    "CONTRACTOR": "ኮንትራት",
+    "INTERN": "የልምምድ ሥራ"
+  },
+  "supportTypes": {
+    "interpreter": "ለቃለ መጠይቅ የምልክት ቋንቋ አስተርጓሚ",
+    "remote": "ከቤት መሥራት",
+    "flexible-hours": "ተለዋዋጭ የሥራ ሰዓት",
+    "screen-reader": "ለስክሪን አንባቢ ምቹ መሳሪያዎች",
+    "step-free": "ደረጃ የሌለው ቢሮ"
+  }
 }
