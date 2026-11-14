@@ -99,3 +99,35 @@ ${rows}
 </body>
 </html>`;
 }
+
+/** Cues back to a WebVTT file. */
+export function toVtt(cues) {
+  const t = (s) => {
+    const ms = Math.round(s * 1000);
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const sec = Math.floor((ms % 60000) / 1000);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(ms % 1000).padStart(3, '0')}`;
+  };
+  return `WEBVTT\n\n${cues.map((c, i) => `${i + 1}\n${t(c.start)} --> ${t(c.end)}\n${c.text}`).join('\n\n')}\n`;
+}
+
+/**
+ * Word error rate: how far a draft is from the corrected captions.
+ * (substitutions + deletions + insertions) / words in the corrected version. 0 = perfect.
+ */
+export function wordErrorRate(reference, hypothesis) {
+  const words = (s) => String(s).toLowerCase().replace(/\[[^\]]*\]/g, ' ').replace(/[^\p{L}\p{N}\s']/gu, ' ').split(/\s+/).filter(Boolean);
+  const r = words(reference);
+  const h = words(hypothesis);
+  if (!r.length) return h.length ? 1 : 0;
+  let prev = Array.from({ length: h.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= r.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= h.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (r[i - 1] === h[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[h.length] / r.length;
+}

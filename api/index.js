@@ -7,6 +7,7 @@ import { parseVtt, renderTranscriptHtml, formatClock } from './vtt.js';
 import { signRouter, adminToken } from './sign.js';
 import { jobsRouter } from './jobs.js';
 import { certificatesRouter } from './certificates.js';
+import { captionsRouter } from './captions.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -29,7 +30,8 @@ const cors = (req, res, next) => { res.set('Access-Control-Allow-Origin', '*'); 
 const revalidate = { cacheControl: false, setHeaders: (res) => res.set('Cache-Control', 'no-cache') };
 
 app.use('/module', cors, express.static(path.join(ROOT, 'module'), revalidate));
-app.use('/media', cors, express.static(LESSONS_DIR, { maxAge: '1d', fallthrough: false }));
+// Lesson files can be corrected (captions) or replaced (sign video) under the same name: always revalidate.
+app.use('/media', cors, express.static(LESSONS_DIR, { ...revalidate, fallthrough: false }));
 app.use('/demo', express.static(path.join(ROOT, 'demo'), revalidate));
 app.use('/savanna', express.static(path.join(ROOT, 'savanna'), revalidate));
 app.use('/studio', express.static(path.join(ROOT, 'studio'), revalidate));
@@ -141,6 +143,7 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
 });
 
 api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
+api.use(captionsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(jobsRouter({ jobsFile: path.resolve(process.env.JOBS_FILE || path.join(ROOT, 'demo', 'data', 'jobs.json')) }));
 const certificates = certificatesRouter({ dataDir: DATA_DIR, publicUrl: process.env.PUBLIC_URL });
 api.use(certificates.api);
