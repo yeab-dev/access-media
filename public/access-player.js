@@ -40,7 +40,7 @@ const STRINGS = {
     sizes: { s: 'Small', m: 'Medium', l: 'Large', xl: 'Extra large', xxl: 'Huge' },
     colours: { white: 'White', yellow: 'Yellow', cyan: 'Cyan', green: 'Green', black: 'Black' },
     backgrounds: { black: 'Black', translucent: 'Black, see-through', white: 'White', none: 'None' },
-    settings: 'Settings',
+    settings: 'Settings', download: 'Download for offline',
     sign: 'Sign language', signWindow: 'Sign language window', signSize: 'Window size', signPlace: 'Position',
     signSizes: { s: 'Small', m: 'Medium', l: 'Large', xl: 'Extra large' },
     places: { tr: 'Top right', tl: 'Top left', br: 'Bottom right', bl: 'Bottom left', beside: 'Beside the video', custom: 'Where I moved it' },
@@ -81,7 +81,7 @@ const STRINGS = {
     sizes: { s: 'ትንሽ', m: 'መካከለኛ', l: 'ትልቅ', xl: 'በጣም ትልቅ', xxl: 'እጅግ ትልቅ' },
     colours: { white: 'ነጭ', yellow: 'ቢጫ', cyan: 'ሰማያዊ', green: 'አረንጓዴ', black: 'ጥቁር' },
     backgrounds: { black: 'ጥቁር', translucent: 'ግልጽ ጥቁር', white: 'ነጭ', none: 'የለም' },
-    settings: 'ቅንብሮች',
+    settings: 'ቅንብሮች', download: 'ከመስመር ውጭ ለማየት አውርድ',
     sign: 'የምልክት ቋንቋ', signWindow: 'የምልክት ቋንቋ መስኮት', signSize: 'የመስኮት መጠን', signPlace: 'ቦታ',
     signSizes: { s: 'ትንሽ', m: 'መካከለኛ', l: 'ትልቅ', xl: 'በጣም ትልቅ' },
     places: { tr: 'ከላይ ቀኝ', tl: 'ከላይ ግራ', br: 'ከታች ቀኝ', bl: 'ከታች ግራ', beside: 'ከቪዲዮው ጎን', custom: 'ያንቀሳቀስኩበት ቦታ' },
@@ -117,6 +117,7 @@ const ICONS = {
   volume: '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/>',
   muted: '<path d="M3 9v6h4l5 5V4L7 9H3zm18.3-1.7-1.4-1.4L17 8.6l-2.9-2.7-1.4 1.4L15.6 10l-2.9 2.9 1.4 1.4L17 11.4l2.9 2.9 1.4-1.4-2.9-2.9z"/>',
   transcript: '<path d="M4 5h16v2H4zm0 4h16v2H4zm0 4h10v2H4zm0 4h10v2H4z"/>',
+  download: '<path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>',
   settings: '<path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>',
   sign: '<path d="M12.5 23c-3 0-5.7-1.8-6.8-4.6L3 11.6a.9.9 0 0 1 1.2-1.2l.7.2c.5.2.9.6 1.1 1.1L7.3 15H8V3.4a1.2 1.2 0 0 1 2.3 0V11h1V2.2a1.2 1.2 0 0 1 2.3 0V11h1V3.6a1.2 1.2 0 0 1 2.3 0V11h1V6.4a1.2 1.2 0 0 1 2.3 0v9.2c0 4.1-3.4 7.4-7.5 7.4z"/>',
   ad: '<rect x="1.5" y="5" width="21" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="15.6" text-anchor="middle" font-size="9" font-weight="700" font-family="system-ui,sans-serif">AD</text>',
@@ -193,12 +194,12 @@ input[type=range] { accent-color: var(--ap-accent); min-height: 44px; margin: 0;
 .group { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.25rem; }
 .spacer { flex: 1 1 0; }
 button, select { font: inherit; color: inherit; }
-button.ctl { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+.ctl { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-width: 48px; min-height: 48px; padding: 4px 6px; border: 1px solid transparent; border-radius: 6px;
-  background: transparent; cursor: pointer; font-size: 0.75rem; line-height: 1.1; }
-button.ctl svg { fill: currentColor; }
-button.ctl:hover { background: var(--ap-panel); border-color: var(--ap-line); }
-button.ctl[aria-pressed=true], button.ctl[aria-expanded=true] { background: var(--ap-panel); border-color: var(--ap-accent); }
+  background: transparent; cursor: pointer; font-size: 0.75rem; line-height: 1.1; color: inherit; text-decoration: none; text-align: center; }
+.ctl svg { fill: currentColor; }
+.ctl:hover { background: var(--ap-panel); border-color: var(--ap-line); }
+.ctl[aria-pressed=true], .ctl[aria-expanded=true] { background: var(--ap-panel); border-color: var(--ap-accent); }
 .field { display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem; }
 .field select { min-height: 44px; min-width: 6rem; padding: 0 0.5rem; border: 1px solid var(--ap-line); border-radius: 6px; background: var(--ap-bg); font-size: 0.95rem; }
 .volume { width: 6rem; }
@@ -245,6 +246,8 @@ legend { font-weight: 600; padding: 0 0.25rem; }
 .check input { width: 1.25rem; height: 1.25rem; accent-color: var(--ap-accent); }
 .hint { flex-basis: 100%; margin: 0; font-size: 0.85rem; color: var(--ap-muted); }
 .cue.desc span { font-style: italic; }
+/* Ethiopic has no true italic; slanted script is harder to read. */
+.cue.desc:lang(am) span, .ad-text:lang(am), .ad-text span:lang(am) { font-style: normal; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 @media (max-width: 30rem) { .volume { display: none; } }
 `;
@@ -321,6 +324,7 @@ class AccessPlayer extends HTMLElement {
       manifest.sources = (manifest.sources || []).map((s) => ({ ...s, src: abs(s.src) }));
       manifest.tracks = (manifest.tracks || []).map((tr) => ({ ...tr, src: abs(tr.src) }));
       if (manifest.sign?.src) manifest.sign = { ...manifest.sign, src: abs(manifest.sign.src) };
+      if (manifest.offline) manifest.offline = abs(manifest.offline);
       this.#manifest = manifest;
       this.#render(manifest);
     } catch (err) {
@@ -401,6 +405,7 @@ class AccessPlayer extends HTMLElement {
         <select id="ap-quality" class="quality">${qualities.map((q) => `<option value="${escapeAttr(q)}">${q === 'audio' ? t.audioOnly : escapeHtml(q)}</option>`).join('')}</select>
       </div>` : ''}
       <button type="button" class="ctl transcript-btn" aria-expanded="false" aria-controls="ap-transcript">${icon('transcript')}<span class="lbl">${t.showTranscript}</span></button>
+      ${m.offline ? `<a class="ctl offline" href="${escapeAttr(m.offline)}" download>${icon('download')}<span class="lbl">${t.download}</span></a>` : ''}
       ${document.fullscreenEnabled ? `<button type="button" class="ctl fs">${icon('fullscreen')}<span class="lbl">${t.fullscreen}</span></button>` : ''}
     </div>
   </div>
