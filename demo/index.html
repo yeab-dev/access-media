@@ -21,6 +21,13 @@
   pre { background: rgb(127 127 127 / 0.12); padding: 0.75rem; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 </style>
 <script type="module" src="/module/db-player.js"></script>
+<script>
+  // ?lesson=<id> opens another lesson (the sign studio links here after saving).
+  addEventListener('DOMContentLoaded', () => {
+    const id = new URLSearchParams(location.search).get('lesson');
+    if (id && /^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) document.querySelector('db-player').setAttribute('lesson', id);
+  });
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>

@@ -158,6 +158,7 @@ async function newestMtime(files) {
  * Throws ENOENT if the lesson does not exist.
  */
 export async function ensureOfflinePack(dir) {
+  dir = path.resolve(dir);
   const manifestPath = path.join(dir, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   const c = packContents(manifest);

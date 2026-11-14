@@ -125,7 +125,10 @@ Done:
 - Transcript panel (seek buttons, follow along) + "Download transcript (text)".
 - Offline: "Download for offline (0.4 MB)" — size shown before tapping — downloads the offline pack zip.
 - API v1: `GET /api/v1/health`, `/lessons`, `/lessons/{id}` (absolute URLs + links), `/lessons/{id}/transcript?lang=&format=html|txt`, `/lessons/{id}/offline-pack`. Errors 400/404 with a message in words.
-- Tests: 12 unit + 36 browser (desktop + Pixel 7), axe clean incl. blank page and Savanna mount.
+- **Sign language pipeline** (`api/sign.js`, `studio/sign.html`): interpreters record in the browser (camera on HTTPS/localhost) while the lesson plays from 0 → auto-aligned; review side by side with a timing slider; save → `POST /api/v1/lessons/{id}/sign` (Bearer `ADMIN_TOKEN`, multipart `video` + `offset`) → ffmpeg trims/pads by offset, 360p H.264 ~220 kbps, **audio removed**, previous version kept as `lesson.ethsl.previous.mp4`, manifest updated. Learner requests: player in API mode POSTs anonymous `/lessons/{id}/sign-requests` when a lesson has no sign video; `GET /sign-requests` lists most-wanted first (studio sorts lessons by it); answered on upload.
+- Config: `.env` (gitignored; `ADMIN_TOKEN`, `PORT`, `DATA_DIR`), `.env.example` committed. `npm run dev`/`start` load `.env`.
+- Browser tests run against a throwaway copy of the data (`.test-data/`, plus a `studio-test` lesson) with `ADMIN_TOKEN=test-code`; the studio test uses Chromium's fake camera.
+- Tests: 17 unit + 40 browser (desktop + Pixel 7), axe clean incl. blank page, Savanna mount and studio.
 
 Not done yet (see Technical Guide): service-worker offline (needs HTTPS), caption editor (draft → correct → VTT), `POST /lessons/{id}/captions`, documents (tagged PDF + clean HTML with image descriptions), career gateway (`savanna/pages/jobs.html`, job card "Listen to summary", certificate page / Open Badges 3.0, JobPosting JSON-LD), Docker Compose, openapi.yaml + /docs, webhook, README, CONFORMANCE.md, Slow 3G measurement. Real ESL clip and native Amharic review still needed.
 

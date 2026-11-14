@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureOfflinePack } from './offline.js';
 import { parseVtt, renderTranscriptHtml, formatClock } from './vtt.js';
+import { signRouter, adminToken } from './sign.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -29,6 +30,7 @@ app.use('/module', cors, express.static(path.join(ROOT, 'module'), revalidate));
 app.use('/media', cors, express.static(LESSONS_DIR, { maxAge: '1d', fallthrough: false }));
 app.use('/demo', express.static(path.join(ROOT, 'demo'), revalidate));
 app.use('/savanna', express.static(path.join(ROOT, 'savanna'), revalidate));
+app.use('/studio', express.static(path.join(ROOT, 'studio'), revalidate));
 app.get('/', (_req, res) => res.redirect('/demo/'));
 
 // ---------- API v1 ----------
@@ -127,6 +129,7 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
   try {
     const file = await ensureOfflinePack(path.join(LESSONS_DIR, id));
     res.sendFile(file, {
+      dotfiles: 'allow', // the data folder may itself be hidden (e.g. .test-data); the file name is ours
       headers: { 'Content-Disposition': `attachment; filename="${id}-offline.zip"`, 'Cache-Control': 'no-cache' },
     });
   } catch (err) {
@@ -135,6 +138,7 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
   }
 });
 
+api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
 app.use('/api/v1', api);
 
 app.use((err, req, res, _next) => {
@@ -144,5 +148,6 @@ app.use((err, req, res, _next) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  adminToken();
   app.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
 }

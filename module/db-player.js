@@ -225,6 +225,7 @@ class DbPlayer extends HTMLElement {
   #uiLang = 'en';
   #lastProgress = -1;
   #settingUp = false;
+  #signAsked = false;
 
   constructor() {
     super();
@@ -617,6 +618,14 @@ class DbPlayer extends HTMLElement {
       // No interpreter video for this lesson yet: say so in words, and let the host know it was wanted.
       els.note.textContent = t.signNone;
       this.#emit('sign-requested', { lesson: this.#manifest.id });
+      // Lessons from our API: count the request (anonymous) so interpreters know what to record next.
+      if (this.getAttribute('lesson') && !this.#signAsked) {
+        this.#signAsked = true;
+        const api = (this.getAttribute('api') || scriptOrigin).replace(/\/$/, '');
+        fetch(`${api}/api/v1/lessons/${encodeURIComponent(this.getAttribute('lesson'))}/sign-requests`, { method: 'POST' })
+          .then((r) => { if (r.ok) els.note.textContent = `${t.signNone} ${t.signRequested}`; })
+          .catch(() => {});
+      }
     });
     els.helpBtn.addEventListener('click', () => els.help.showModal());
     this.#root.querySelector('.help-close').addEventListener('click', () => els.help.close());

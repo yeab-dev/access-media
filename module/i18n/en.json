@@ -151,5 +151,6 @@
   "sizeMB": "{size} MB",
   "adAudio": "Described audio",
   "signTools": "Sign window position and size",
-  "languageLabel": "Language / ቋንቋ"
+  "languageLabel": "Language / ቋንቋ",
+  "signRequested": "We have told the lesson team that you want sign language for this lesson."
 }
