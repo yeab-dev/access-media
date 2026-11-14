@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +10,7 @@ import { jobsRouter } from './jobs.js';
 import { certificatesRouter } from './certificates.js';
 import { captionsRouter } from './captions.js';
 import { documentsRouter } from './documents.js';
+import { webhooksRouter } from './webhooks.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -19,6 +21,8 @@ const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 export const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback'); // correct https URLs behind a local tunnel (cloudflared, ngrok)
+// Compress text (JS, JSON, HTML, VTT): the player is ~62 KB raw, ~18 KB compressed. Media is already compressed.
+app.use(compression());
 
 app.use((req, res, next) => {
   res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
@@ -37,6 +41,18 @@ app.use('/demo', express.static(path.join(ROOT, 'demo'), revalidate));
 app.use('/savanna', express.static(path.join(ROOT, 'savanna'), revalidate));
 app.use('/studio', express.static(path.join(ROOT, 'studio'), revalidate));
 app.get('/', (_req, res) => res.redirect('/demo/'));
+
+// Level 2 documentation: the OpenAPI file, and Swagger UI at /docs so a judge can try calls in the browser.
+app.get('/openapi.yaml', (_req, res) => res.type('application/yaml').sendFile(path.join(ROOT, 'openapi.yaml')));
+app.use('/docs/assets', express.static(path.dirname(fileURLToPath(import.meta.resolve('swagger-ui-dist/package.json')))));
+app.get('/docs', (_req, res) => res.type('html').send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API documentation — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/docs/assets/swagger-ui.css"></head>
+<body><main id="api"></main>
+<script src="/docs/assets/swagger-ui-bundle.js"></script>
+<script>SwaggerUIBundle({ url: '/openapi.yaml', dom_id: '#api', deepLinking: true });</script>
+</body></html>`));
 
 // ---------- API v1 ----------
 const api = express.Router();
@@ -147,6 +163,7 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
 api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
 api.use(captionsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(documentsRouter({ lessonsDir: LESSONS_DIR }));
+api.use(webhooksRouter({ dataDir: DATA_DIR }));
 api.use(jobsRouter({ jobsFile: path.resolve(process.env.JOBS_FILE || path.join(ROOT, 'demo', 'data', 'jobs.json')) }));
 const certificates = certificatesRouter({ dataDir: DATA_DIR, publicUrl: process.env.PUBLIC_URL });
 api.use(certificates.api);

@@ -1,0 +1,383 @@
+openapi: 3.1.0
+info:
+  title: Digital Bridge accessible learning media API
+  version: 1.0.0
+  summary: Lessons with captions, sign language and audio description; offline packs; documents; jobs; verifiable certificates.
+  description: |
+    Level 2 of the Track 2 module (Digital Bridge Accessibility Hackathon 2026).
+    The player (`<db-player>`) and the job card (`<db-job-card>`) use these calls; other platforms can too.
+
+    * Reading is public and allowed from any site (CORS `*`). No account is needed to watch a lesson.
+    * Changing anything needs the staff access code: `Authorization: Bearer <ADMIN_TOKEN>`.
+    * Errors are JSON `{ "error": "<code>", "message": "<what to do, in words>" }` with 400, 401, 404, 502 or 503.
+    * Lesson files (video, captions, sign video) are served from `/media/{lesson}/...`.
+  license:
+    name: To be confirmed (the open licence ALX names)
+servers:
+  - url: http://localhost:8080
+    description: docker compose up
+tags:
+  - name: Lessons
+  - name: Sign language
+  - name: Captions
+  - name: Jobs
+  - name: Certificates
+  - name: Webhooks
+
+components:
+  securitySchemes:
+    staff:
+      type: http
+      scheme: bearer
+      description: The ADMIN_TOKEN set in .env.
+  parameters:
+    lessonId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$' }
+      example: demo
+    lang:
+      name: lang
+      in: query
+      schema: { type: string, example: am }
+      description: Language code, for example `en` or `am`.
+  responses:
+    Error:
+      description: Something is wrong; the message says what, in words.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error: { type: string, example: not_found }
+        message: { type: string, example: There is no lesson with this id. }
+    Track:
+      type: object
+      properties:
+        kind: { type: string, enum: [captions, subtitles, descriptions] }
+        srclang: { type: string, example: am }
+        label: { type: string, example: አማርኛ }
+        src: { type: string, format: uri }
+        reviewed: { type: boolean, description: True when a person checked it. }
+    Lesson:
+      type: object
+      properties:
+        id: { type: string, example: demo }
+        title: { type: string, example: How to write a CV }
+        titles: { type: object, additionalProperties: { type: string }, example: { am: ሲቪ እንዴት እንደሚጻፍ } }
+        lang: { type: string }
+        duration: { type: number, description: Seconds. }
+        poster: { type: string, format: uri }
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              quality: { type: string, enum: ['360p', '240p', audio, video] }
+              src: { type: string, format: uri }
+              type: { type: string, example: video/mp4 }
+        tracks: { type: array, items: { $ref: '#/components/schemas/Track' } }
+        sign:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                src: { type: string, format: uri }
+                lang: { type: string, example: sgn-et }
+                placeholder: { type: boolean }
+                recordedAt: { type: string, format: date-time }
+                offset: { type: number }
+        links:
+          type: object
+          properties:
+            transcript: { type: string, format: uri }
+            offlinePack: { type: string, format: uri }
+            document: { type: string, format: uri }
+    Job:
+      type: object
+      properties:
+        id: { type: string }
+        datePosted: { type: string, format: date }
+        validThrough: { type: string, format: date }
+        employmentType: { type: string, example: FULL_TIME }
+        remote: { type: boolean }
+        employer: { type: string }
+        city: { type: string }
+        apply: { type: string, format: uri }
+        support:
+          type: array
+          items: { type: string, enum: [interpreter, remote, flexible-hours, screen-reader, step-free] }
+        en: { $ref: '#/components/schemas/JobText' }
+        am: { $ref: '#/components/schemas/JobText' }
+        jsonLd: { type: object, description: 'schema.org JobPosting (Level 3).' }
+    JobText:
+      type: object
+      properties:
+        title: { type: string }
+        summary: { type: string }
+        audio: { type: string, description: Optional recorded summary (URL). }
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Is the server up?
+      responses:
+        '200': { description: OK, content: { application/json: { example: { ok: true } } } }
+
+  /api/v1/lessons:
+    get:
+      tags: [Lessons]
+      summary: List lessons
+      responses:
+        '200':
+          description: Lessons
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lessons:
+                    type: array
+                    items:
+                      type: object
+                      properties: { id: { type: string }, title: { type: string }, lang: { type: string }, duration: { type: number }, href: { type: string } }
+
+  /api/v1/lessons/{id}:
+    get:
+      tags: [Lessons]
+      summary: One lesson with all its files (absolute URLs)
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '200': { description: The lesson, content: { application/json: { schema: { $ref: '#/components/schemas/Lesson' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/lessons/{id}/transcript:
+    get:
+      tags: [Lessons]
+      summary: Transcript (captions and audio descriptions together)
+      parameters:
+        - { $ref: '#/components/parameters/lessonId' }
+        - { $ref: '#/components/parameters/lang' }
+        - { name: format, in: query, schema: { type: string, enum: [html, txt], default: html } }
+      responses:
+        '200':
+          description: The transcript
+          content:
+            text/html: {}
+            text/plain: {}
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/lessons/{id}/document:
+    get:
+      tags: [Lessons]
+      summary: The lesson as a document, with every picture described
+      description: HTML redirects to the generated page under /media. PDF is tagged (headings, figures with descriptions, reading order).
+      parameters:
+        - { $ref: '#/components/parameters/lessonId' }
+        - { $ref: '#/components/parameters/lang' }
+        - { name: format, in: query, schema: { type: string, enum: [html, pdf], default: html } }
+      responses:
+        '200': { description: PDF, content: { application/pdf: {} } }
+        '302': { description: Redirect to the HTML document }
+        '404': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+
+  /api/v1/lessons/{id}/offline-pack:
+    get:
+      tags: [Lessons]
+      summary: Offline pack for a 3G phone (one zip)
+      description: lesson.mp4 (240p), lesson.mp3, caption files, a light index.html that works from the phone's storage, README.txt. Supports Range, so downloads can resume.
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '200': { description: The zip, content: { application/zip: {} } }
+        '206': { description: Part of the zip (Range request) }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/lessons/{id}/sign:
+    post:
+      tags: [Sign language]
+      summary: Attach an interpreter recording to a lesson
+      description: The recording is trimmed or padded by `offset` seconds, made small (360p) and its sound removed.
+      security: [{ staff: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video: { type: string, format: binary }
+                offset: { type: number, minimum: -10, maximum: 10, description: 'Positive: cut this much from the start.' }
+      responses:
+        '201': { description: Saved }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/lessons/{id}/sign-requests:
+    post:
+      tags: [Sign language]
+      summary: A learner asked for sign language on this lesson (anonymous count)
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '201': { description: Counted }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/sign-requests:
+    get:
+      tags: [Sign language]
+      summary: Lessons learners want signed, most wanted first
+      responses:
+        '200':
+          description: Requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items: { type: object, properties: { id: { type: string }, title: { type: string }, count: { type: integer }, lastRequested: { type: string, format: date-time }, hasSign: { type: boolean } } }
+
+  /api/v1/lessons/{id}/captions:
+    post:
+      tags: [Captions]
+      summary: Upload or correct a caption (or audio description) file
+      security: [{ staff: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lang, vtt]
+              properties:
+                kind: { type: string, enum: [captions, descriptions], default: captions }
+                lang: { type: string, example: am }
+                vtt: { type: string, description: WebVTT text }
+                source: { type: string, enum: [person, draft], default: person }
+      responses:
+        '201': { description: Saved }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/lessons/{id}/captions/draft:
+    post:
+      tags: [Captions]
+      summary: First draft from the speech model (not saved)
+      description: Needs ASR_URL (an OpenAI-style /v1/audio/transcriptions server, e.g. local faster-whisper). Without it, 503 with a message.
+      security: [{ staff: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { lang: { type: string, example: en } } }
+      responses:
+        '200': { description: Draft, content: { application/json: { schema: { type: object, properties: { vtt: { type: string }, model: { type: string }, lines: { type: integer } } } } } }
+        '503': { $ref: '#/components/responses/Error' }
+
+  /api/v1/jobs:
+    get:
+      tags: [Jobs]
+      summary: Jobs (test data), each with schema.org JobPosting
+      responses:
+        '200': { description: Jobs, content: { application/json: { schema: { type: object, properties: { jobs: { type: array, items: { $ref: '#/components/schemas/Job' } } } } } } }
+  /api/v1/jobs/{id}:
+    get:
+      tags: [Jobs]
+      summary: One job
+      parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: junior-frontend }]
+      responses:
+        '200': { description: The job, content: { application/json: { schema: { $ref: '#/components/schemas/Job' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /api/v1/certificates:
+    post:
+      tags: [Certificates]
+      summary: Issue an Open Badges 3.0 certificate (signed VC-JWT, EdDSA)
+      security: [{ staff: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learnerName, achievement]
+              properties:
+                learnerName: { type: string, maxLength: 120 }
+                achievement:
+                  type: object
+                  required: [name]
+                  properties: { id: { type: string }, name: { type: string }, description: { type: string }, criteria: { type: string } }
+      responses:
+        '201': { description: 'Issued: { id, page, credential, jwt }' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/certificates/{id}:
+    get:
+      tags: [Certificates]
+      summary: A certificate and whether its signature is valid
+      parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: demo-learner }]
+      responses:
+        '200': { description: '{ valid, credential, jwt }' }
+        '404': { $ref: '#/components/responses/Error' }
+  /certificates/{id}:
+    get:
+      tags: [Certificates]
+      summary: The page an employer opens ("Verified" or "Not valid"); ?lang=am for Amharic
+      parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: demo-learner }]
+      responses:
+        '200': { description: HTML page, content: { text/html: {} } }
+  /.well-known/jwks.json:
+    get:
+      tags: [Certificates]
+      summary: The issuer's public key, to check certificates without asking us
+      responses:
+        '200': { description: JWK set }
+
+  /api/v1/webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Register an address to be told when something happens
+      description: |
+        We POST `{ event, time, data }` with headers `X-DB-Event` and `X-DB-Signature: sha256=<HMAC-SHA256 of the body with your secret>`.
+        Events: sign.recorded, sign.requested, captions.updated, certificate.issued. No learner names are sent.
+        The secret is returned once, when you register.
+      security: [{ staff: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, format: uri }
+                events: { type: array, items: { type: string, enum: [sign.recorded, sign.requested, captions.updated, certificate.issued] } }
+      responses:
+        '201': { description: 'Registered: { id, url, events, secret, createdAt }' }
+        '400': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [Webhooks]
+      summary: List webhooks (without secrets)
+      security: [{ staff: [] }]
+      responses:
+        '200': { description: Webhooks }
+  /api/v1/webhooks/{id}:
+    delete:
+      tags: [Webhooks]
+      summary: Remove a webhook
+      security: [{ staff: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/Error' }

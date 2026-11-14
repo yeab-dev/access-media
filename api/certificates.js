@@ -7,6 +7,7 @@ import { generateKeyPairSync, createPrivateKey, createPublicKey, sign, verify, r
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { requireStaff } from './sign.js';
+import { events } from './events.js';
 
 const ID = /^[A-Za-z0-9_-]{6,64}$/;
 const b64 = (buf) => Buffer.from(buf).toString('base64url');
@@ -103,6 +104,8 @@ export function certificatesRouter({ dataDir, publicUrl }) {
       return res.status(400).json({ error: 'invalid_achievement', message: 'Give the achievement a name, for example the course or lesson title.' });
     }
     const { id, credential, jwt } = await issue(req, { learnerName: learnerName.trim(), achievement });
+    // No learner name in the webhook: the host already has it.
+    events.emit('certificate.issued', { id, page: `${base(req)}/certificates/${id}`, achievement: achievement.name });
     res.status(201).json({ id, page: `${base(req)}/certificates/${id}`, credential, jwt });
   });
 

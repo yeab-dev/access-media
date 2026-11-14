@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, writeFile, rename, rm, mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
+import { events } from './events.js';
 import os from 'node:os';
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -80,6 +81,7 @@ export function signRouter({ lessonsDir, dataDir }) {
       await writeFile(requestsFile, JSON.stringify(all, null, 2));
     });
     await writing;
+    events.emit('sign.requested', { lesson: id });
     res.status(201).json({ ok: true });
   });
 
@@ -125,6 +127,7 @@ export function signRouter({ lessonsDir, dataDir }) {
         if (all[id]) { delete all[id]; await writeFile(requestsFile, JSON.stringify(all, null, 2)); }
       });
       await writing;
+      events.emit('sign.recorded', { lesson: id, recordedAt: manifest.sign.recordedAt });
       res.status(201).json({ ok: true, sign: manifest.sign });
     } catch (err) {
       next(err);

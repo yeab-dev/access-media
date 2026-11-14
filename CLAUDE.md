@@ -134,9 +134,10 @@ Done:
 - Dev server: run plainly (`npm start` with `PORT=8082`); `node --watch` here left orphan servers serving old code — restart by hand after changes.
 - Config: `.env` (gitignored; `ADMIN_TOKEN`, `PORT`, `DATA_DIR`), `.env.example` committed. `npm run dev`/`start` load `.env`.
 - Browser tests run against a throwaway copy of the data (`.test-data/`, plus a `studio-test` lesson) with `ADMIN_TOKEN=test-code`; the studio test uses Chromium's fake camera.
-- Tests: 32 unit + 63 browser (desktop + Pixel 7), axe clean incl. blank page, Savanna mount and studio.
+- Tests: 35 unit + 64 browser (desktop + Pixel 7), axe clean incl. blank page, Savanna mount and studio.
 
-Not done yet (see Technical Guide): service-worker offline (needs HTTPS), Docker Compose, openapi.yaml + /docs, webhook, README, CONFORMANCE.md, Slow 3G measurement. Real ESL clip and native Amharic review still needed.
+- **Submission package:** `Dockerfile` (node:24-bookworm-slim + ffmpeg + chromium + fonts-noto-core/dejavu; builds demo media into /data on first start) and `docker-compose.yml` (`web` on 8080, volume `lessons`, `.env`; optional `asr` profile = speaches faster-whisper) — **not yet run** (no Docker in the dev session); `openapi.yaml` + Swagger UI at `/docs`; webhooks (`api/webhooks.js`, `api/events.js`: sign.recorded, sign.requested, captions.updated, certificate.issued; HMAC `X-DB-Signature`; no learner names); `compression` middleware (player 62 → 18.7 KB); `scripts/measure-3g.mjs` (Slow 3G: player usable 9.0 s, 24 KB); `README.md` (guide's outline; TODO team/co-designer names, licence); `CONFORMANCE.md` (WCAG 2.2 A/AA table; co-designer rows TODO).
+- Not done: service-worker offline, Braille, live-session viewer, LTI 1.3; real ESL recording; native Amharic review; docker compose test on another laptop.
 
 ## Commands
 
