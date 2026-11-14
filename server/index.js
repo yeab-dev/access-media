@@ -2,6 +2,7 @@ import express from 'express';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ensureOfflinePack } from './offline.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -26,7 +27,8 @@ const cors = (req, res, next) => {
   next();
 };
 
-app.use('/player', cors, express.static(path.join(ROOT, 'public'), { maxAge: '1h' }));
+// no-cache = browsers revalidate (cheap 304 via ETag), so host sites always get the current player.
+app.use('/player', cors, express.static(path.join(ROOT, 'public'), { cacheControl: false, setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
 app.use('/media', cors, express.static(MEDIA_DIR, { maxAge: '1d', fallthrough: false }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -43,10 +45,26 @@ app.get('/api/media/:id', cors, async (req, res) => {
     manifest.sources = (manifest.sources || []).map((s) => ({ ...s, src: abs(s.src) }));
     manifest.tracks = (manifest.tracks || []).map((t) => ({ ...t, src: abs(t.src) }));
     if (manifest.sign) manifest.sign = { ...manifest.sign, src: abs(manifest.sign.src) };
+    manifest.offline = `${req.protocol}://${req.get('host')}/api/media/${id}/offline.zip`;
     res.json(manifest);
   } catch (err) {
     if (err.code === 'ENOENT') return res.status(404).json({ error: 'not_found' });
     throw err;
+  }
+});
+
+// Offline pack: built on first request, cached, served with Range support so 3G downloads can resume.
+app.get('/api/media/:id/offline.zip', cors, async (req, res, next) => {
+  const { id } = req.params;
+  if (!ID.test(id)) return res.status(400).json({ error: 'invalid_id' });
+  try {
+    const file = await ensureOfflinePack(path.join(MEDIA_DIR, id));
+    res.sendFile(file, {
+      headers: { 'Content-Disposition': `attachment; filename="${id}-offline.zip"`, 'Cache-Control': 'no-cache' },
+    });
+  } catch (err) {
+    if (err.code === 'ENOENT') return res.status(404).json({ error: 'not_found' });
+    next(err);
   }
 });
 
