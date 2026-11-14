@@ -5,15 +5,56 @@
   "duration": 30,
   "poster": "poster.jpg",
   "sources": [
-    { "quality": "360p", "src": "lesson.mp4", "type": "video/mp4" },
-    { "quality": "240p", "src": "lesson.240p.mp4", "type": "video/mp4" },
-    { "quality": "audio", "src": "lesson.mp3", "type": "audio/mpeg" }
+    {
+      "quality": "360p",
+      "src": "lesson.mp4",
+      "type": "video/mp4"
+    },
+    {
+      "quality": "240p",
+      "src": "lesson.240p.mp4",
+      "type": "video/mp4"
+    },
+    {
+      "quality": "audio",
+      "src": "lesson.mp3",
+      "type": "audio/mpeg"
+    }
   ],
   "tracks": [
-    { "kind": "captions", "srclang": "en", "label": "English", "src": "lesson.en.vtt" },
-    { "kind": "captions", "srclang": "am", "label": "አማርኛ", "src": "lesson.am.vtt" },
-    { "kind": "descriptions", "srclang": "en", "label": "English", "src": "lesson.ad.en.vtt" },
-    { "kind": "descriptions", "srclang": "am", "label": "አማርኛ", "src": "lesson.ad.am.vtt" }
+    {
+      "kind": "captions",
+      "srclang": "en",
+      "label": "English",
+      "src": "lesson.en.vtt"
+    },
+    {
+      "kind": "captions",
+      "srclang": "am",
+      "label": "አማርኛ",
+      "src": "lesson.am.vtt"
+    },
+    {
+      "kind": "descriptions",
+      "srclang": "en",
+      "label": "English",
+      "src": "lesson.ad.en.vtt"
+    },
+    {
+      "kind": "descriptions",
+      "srclang": "am",
+      "label": "አማርኛ",
+      "src": "lesson.ad.am.vtt"
+    }
   ],
-  "sign": { "src": "lesson.ethsl.mp4", "lang": "sgn-et", "label": "Ethiopian Sign Language", "placeholder": true }
+  "sign": {
+    "src": "lesson.ethsl.mp4",
+    "lang": "sgn-et",
+    "label": "Ethiopian Sign Language",
+    "placeholder": true
+  },
+  "images": "images.json",
+  "titles": {
+    "am": "ሲቪ እንዴት እንደሚጻፍ"
+  }
 }

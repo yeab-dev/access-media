@@ -177,6 +177,8 @@ legend { font-weight: 600; padding: 0 0.25rem; }
 .check input { width: 1.25rem; height: 1.25rem; accent-color: var(--ap-accent); }
 .hint { flex-basis: 100%; margin: 0; font-size: 0.85rem; color: var(--ap-muted); }
 .cue.desc span { font-style: italic; }
+.docs { margin: 0.25rem 0 0; padding-inline-start: 1.25rem; }
+.docs a { color: var(--ap-focus); display: inline-block; padding: 0.6rem 0; }
 /* Ethiopic has no true italic; slanted script is harder to read. */
 .cue.desc:lang(am) span, .ad-text:lang(am), .ad-text span:lang(am) { font-style: normal; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
@@ -311,6 +313,7 @@ class DbPlayer extends HTMLElement {
       sign: m.sign?.src ? { ...m.sign, src: abs(m.sign.src) } : null,
       describeAudio: abs(m.describeAudio),
       offline: abs(m.links?.offlinePack),
+      document: abs(m.links?.document),
     };
   }
 
@@ -453,6 +456,10 @@ class DbPlayer extends HTMLElement {
     <label><input type="checkbox" class="follow" checked> ${t.followAlong}</label>
     <ol class="cues"></ol>
     <p><button type="button" class="text-btn transcript-dl">${t.downloadTranscript}</button></p>
+    ${m.document ? `<ul class="docs">
+      <li><a class="doc-html" href="${escapeAttr(m.document)}?lang=${this.uiLang}&amp;format=html">${t.docHtml}</a></li>
+      <li><a class="doc-pdf" href="${escapeAttr(m.document)}?lang=${this.uiLang}&amp;format=pdf">${t.docPdf}</a></li>
+    </ul>` : ''}
   </section>
   <dialog class="help" aria-labelledby="ap-help-h">
     <h2 id="ap-help-h">${t.keyboardHelp}</h2>
