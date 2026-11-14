@@ -117,6 +117,7 @@ Repo layout follows the Technical Guide: `module/` (db-player.js + i18n/en.json,
 
 Done:
 - **`<db-player>`** (`module/db-player.js`): Level 1 attribute mode (`src`, `captions` — language from file name `lesson.am.vtt`, `sign`, `describe` .vtt and/or .mp3 described-audio track, `poster`, `label`) or API mode (`lesson`, `api`). `lang` loads `i18n/<lang>.json` (English fills gaps; unknown language → English). `theme` auto|light|dark; reads `--bs-primary`, `--bs-body-font-family`. Events (bubbles+composed): ready, progress (~every 5 s, on pause/end), complete, prefs (learner changes only), sign-requested.
+- **One language switch** ("Language / ቋንቋ", labelled in both): changes interface + captions + audio description (if on) together; remembered on the device and wins over the host's `lang` attribute; focus stays on the switch and the change is announced. Host pages must not add their own language buttons.
 - Keyboard: Space/K, ←/→ ±5 s (video area is focusable, role=group), J/L ±10 s, M, C, D, S, T, F, ? opens Keyboard help `<dialog>` (Escape closes, focus returns).
 - Captions EN/AM drawn by the player; size/colour/background in Settings; captions move aside when the sign window overlaps them. Amharic line-height 1.7, never italic.
 - Sign window: synced, default large; buttons Top left/right, Bottom left/right, Beside the video, Larger, Smaller (+ drag, arrows, +/−); defaults to "beside" on narrow screens. No sign video → visible message + `db-player:sign-requested`.

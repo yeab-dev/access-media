@@ -150,5 +150,6 @@
   "downloadTranscript": "Download transcript (text)",
   "sizeMB": "{size} MB",
   "adAudio": "Described audio",
-  "signTools": "Sign window position and size"
+  "signTools": "Sign window position and size",
+  "languageLabel": "Language / ቋንቋ"
 }

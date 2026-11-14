@@ -28,10 +28,6 @@
   <h1>How to write a CV</h1>
   <p>Demo lesson for the accessible learning media player. Placeholder slides with English and Amharic captions.</p>
 
-  <div class="lang" role="group" aria-label="Player language / የማጫወቻ ቋንቋ">
-    <button type="button" data-lang="en" aria-pressed="true">English</button>
-    <button type="button" data-lang="am" aria-pressed="false" lang="am">አማርኛ</button>
-  </div>
 
   <db-player lesson="demo" lang="en"></db-player>
 
@@ -39,14 +35,5 @@
   <pre><code>&lt;script type="module" src="https://YOUR-SERVER/module/db-player.js"&gt;&lt;/script&gt;
 &lt;db-player lesson="demo" lang="am"&gt;&lt;/db-player&gt;</code></pre>
 </main>
-<script type="module">
-  const player = document.querySelector("db-player");
-  for (const btn of document.querySelectorAll('.lang button')) {
-    btn.addEventListener('click', () => {
-      player.setAttribute('lang', btn.dataset.lang);
-      for (const b of document.querySelectorAll('.lang button')) b.setAttribute('aria-pressed', String(b === btn));
-    });
-  }
-</script>
 </body>
 </html>

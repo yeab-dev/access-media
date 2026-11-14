@@ -244,7 +244,7 @@ class DbPlayer extends HTMLElement {
     if (this.#settingUp) return;
     const p = this.#prefs;
     this.#emit('prefs', {
-      captionLanguage: p.captions || null, captionSize: p.ccSize || 'm', captionColor: p.ccColour || 'white',
+      language: this.uiLang, captionLanguage: p.captions || null, captionSize: p.ccSize || 'm', captionColor: p.ccColour || 'white',
       captionBackground: p.ccBg || 'black', signOn: !!p.signOn, signPosition: p.signPlace || null,
       signWidth: p.signWidth || null, audioDescription: p.ad || null, speed: p.speed || 1,
     });
@@ -266,9 +266,13 @@ class DbPlayer extends HTMLElement {
     this.#els.video?.pause();
   }
 
+  /** The learner's own language choice wins over the host's default (the lang attribute). */
+  #wantedLang() { return this.#prefs.lang || this.getAttribute('lang') || 'en'; }
+
   attributeChangedCallback(name, oldValue, newValue) {
     if (!this.#connected || oldValue === newValue) return;
     if (name === 'lang' && this.#manifest) {
+      if (this.#prefs.lang) return; // the learner already chose a language
       loadStrings(newValue).then(({ lang, t }) => { this.#t = t; this.#uiLang = lang; this.#render(this.#manifest, true); });
     } else {
       this.#load();
@@ -283,7 +287,7 @@ class DbPlayer extends HTMLElement {
 
   async #load() {
     try {
-      const { lang, t } = await loadStrings(this.getAttribute('lang'));
+      const { lang, t } = await loadStrings(this.#wantedLang());
       this.#t = t; this.#uiLang = lang;
     } catch (err) {
       console.error(err);
@@ -360,6 +364,8 @@ class DbPlayer extends HTMLElement {
     const hasSign = !!m.sign?.src;
     const hasAd = descTracks.length > 0 || !!m.describeAudio;
     const places = ['tl', 'tr', 'bl', 'br', 'beside'];
+    // Languages offered by the one switch: the interface languages plus any caption or description language.
+    const langs = [...new Set(['en', 'am', ...m.tracks.map((tr) => tr.srclang).filter(Boolean)])];
     const qualities = m.sources.map((s) => s.quality);
     const titleId = 'ap-title';
 
@@ -405,6 +411,11 @@ class DbPlayer extends HTMLElement {
     </div>
     <div class="spacer"></div>
     <div class="group">
+      <div class="field"><label for="ap-lang">${t.languageLabel}</label>
+        <select id="ap-lang" class="lang-select">
+          ${langs.map((code) => `<option value="${escapeAttr(code)}" lang="${escapeAttr(code)}"${code === this.uiLang ? ' selected' : ''}>${escapeHtml(languageName(code))}</option>`).join('')}
+        </select>
+      </div>
       <div class="field"><label for="ap-cc-select">${t.captions}</label>
         <select id="ap-cc-select" class="cc-select">
           <option value="">${t.off}</option>
@@ -477,7 +488,7 @@ class DbPlayer extends HTMLElement {
       sign: $('.sign'), signVideo: $('.sign-video'), signResize: $('.sign-resize'), signBtn: $('.sign-btn'),
       signTools: $('.sign-tools'), note: $('.note'), adAudio: $('.ad-audio'),
       help: $('dialog.help'), helpBtn: $('.help-btn'), offline: $('.offline'), transcriptDl: $('.transcript-dl'),
-      adSelect: $('.ad-select'), adMode: $('.ad-mode'), adPause: $('.ad-pause'), adText: $('.ad-text'), adLive: $('.ad-live'),
+      langSelect: $('.lang-select'), adSelect: $('.ad-select'), adMode: $('.ad-mode'), adPause: $('.ad-pause'), adText: $('.ad-text'), adLive: $('.ad-live'),
     };
     if (m.poster) els.stage.style.setProperty('--ap-poster', `url("${m.poster.replace(/["\\\n]/g, encodeURIComponent)}")`);
 
@@ -590,6 +601,7 @@ class DbPlayer extends HTMLElement {
     });
 
     els.ccSelect.addEventListener('change', () => this.#selectCaptions());
+    els.langSelect.addEventListener('change', () => this.#setLanguage(els.langSelect.value));
     els.settingsBtn.addEventListener('click', () => this.#togglePanel(els.settingsBtn, els.settingsPanel));
     for (const sel of [els.ccSize, els.ccColour, els.ccBg]) sel.addEventListener('change', () => this.#applyCaptionStyle(true));
 
@@ -862,6 +874,25 @@ class DbPlayer extends HTMLElement {
   }
 
   // ---------- Audio description ----------
+
+  /**
+   * One switch for language: the interface, and captions and audio description if they are on,
+   * all move to the chosen language. Remembered on this device.
+   */
+  async #setLanguage(code) {
+    const m = this.#manifest;
+    const has = (kind) => m.tracks.some((tr) => tr.kind === kind && tr.srclang === code);
+    this.#prefs.lang = code;
+    if (this.#prefs.captions && has('captions')) this.#prefs.captions = code;
+    if (this.#prefs.ad && has('descriptions')) this.#prefs.ad = code;
+    const { lang, t } = await loadStrings(code);
+    this.#t = t; this.#uiLang = lang;
+    this.#render(m, true);
+    this.#savePrefs();
+    // The controls were redrawn in the new language: keep the learner's place and say what changed.
+    this.#els.langSelect.focus();
+    this.#announce(`${t.languageLabel}: ${languageName(code)}`);
+  }
 
   #toggleDescriptions() {
     const sel = this.#els.adSelect;
@@ -1162,6 +1193,10 @@ class DbPlayer extends HTMLElement {
   }
 }
 
+/** A language's name in that language: "English", "አማርኛ". */
+function languageName(code) {
+  try { return new Intl.DisplayNames([code], { type: 'language' }).of(code) || code; } catch { return code; }
+}
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 /** Keep a second media element (sign video, described audio) in step with the lesson video. */
 function follow(main, el, force) {

@@ -150,5 +150,6 @@
   "downloadTranscript": "ግልባጩን አውርድ (ጽሑፍ)",
   "sizeMB": "{size} ሜባ",
   "adAudio": "የተገለጸ ድምፅ",
-  "signTools": "የምልክት መስኮት ቦታ እና መጠን"
+  "signTools": "የምልክት መስኮት ቦታ እና መጠን",
+  "languageLabel": "ቋንቋ / Language"
 }

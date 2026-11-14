@@ -5,7 +5,7 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function openDemo(page, lang = 'en') {
   await page.goto('/demo/');
-  if (lang === 'am') await page.getByRole('button', { name: 'አማርኛ' }).click();
+  if (lang === 'am') await page.locator('db-player').getByLabel('Language / ቋንቋ').selectOption('am');
   await expect(page.locator('db-player').getByRole('slider', { name: lang === 'am' ? 'በቪዲዮው ውስጥ ያለ ቦታ' : 'Position in video' })).toBeVisible();
 }
 

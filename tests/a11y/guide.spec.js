@@ -109,3 +109,24 @@ test('Amharic interface comes from i18n/am.json', async ({ page }) => {
   await expect(player.getByRole('button', { name: 'የቁልፍ ሰሌዳ እገዛ' })).toBeVisible();
   await expect(player.locator('.player')).toHaveAttribute('lang', 'am');
 });
+
+test('one language switch: interface, captions and audio description move together, and it is remembered', async ({ page }) => {
+  await page.goto('/demo/blank.html');
+  await ready(page);
+  const player = page.locator('db-player');
+  await player.getByLabel('Captions', { exact: true }).selectOption({ label: 'English' });
+  await player.getByLabel('Audio description').selectOption({ label: 'English' });
+
+  await player.getByLabel('Language / ቋንቋ').selectOption('am');
+  // Interface is Amharic; captions and descriptions followed; focus stayed on the switch.
+  await expect(player.getByRole('button', { name: 'የቁልፍ ሰሌዳ እገዛ' })).toBeVisible();
+  const lang = player.getByLabel('ቋንቋ / Language');
+  await expect(lang).toBeFocused();
+  await expect(player.getByLabel('የጽሑፍ ትርጉም', { exact: true })).toHaveValue('1');
+  await expect(player.locator('.ad-select option:checked')).toHaveText('አማርኛ');
+  await expect(player.getByRole('status').first()).toContainText('አማርኛ');
+
+  // The choice is remembered on this device, even though the host page says lang="en".
+  await page.reload();
+  await expect(player.getByRole('button', { name: 'የቁልፍ ሰሌዳ እገዛ' })).toBeVisible();
+});
