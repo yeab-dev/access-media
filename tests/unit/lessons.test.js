@@ -134,3 +134,19 @@ test('a file that is not a video fails with a message in words; ids cannot be ta
   assert.equal(again.status, 409);
   assert.match((await again.json()).message, /already a lesson/);
 });
+
+test('example lessons that ship with the app are added when missing, never overwritten', async () => {
+  const { seedLessons } = await import('../../api/index.js');
+  const file = path.join(dir, 'lessons/creativity-at-work/manifest.json');
+  await seedLessons();
+  const m = JSON.parse(await readFile(file, 'utf8'));
+  assert.equal(m.title, 'Creativity at work');
+  assert.deepEqual(m.sources.map((s) => s.quality), ['360p', '240p', 'audio']);
+  assert.equal(m.tracks[0].auto, true, 'the caption draft is marked automatic');
+  await access(path.join(dir, 'lessons/creativity-at-work/lesson.240p.mp4'));
+  // A lesson already there (for example with corrected captions) is kept.
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(file, JSON.stringify({ ...m, title: 'Changed by a person' }));
+  await seedLessons();
+  assert.equal(JSON.parse(await readFile(file, 'utf8')).title, 'Changed by a person');
+});
