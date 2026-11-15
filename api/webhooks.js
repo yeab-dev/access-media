@@ -9,7 +9,7 @@ import path from 'node:path';
 import { requireStaff } from './sign.js';
 import { events } from './events.js';
 
-export const EVENTS = ['sign.recorded', 'sign.requested', 'captions.updated', 'certificate.issued'];
+export const EVENTS = ['lesson.ready', 'sign.recorded', 'sign.requested', 'captions.updated', 'certificate.issued'];
 
 export function sign(secret, body) {
   return `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;

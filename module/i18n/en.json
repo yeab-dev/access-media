@@ -184,5 +184,11 @@
   "adLanguage": "Description language",
   "playback": "Playback",
   "signMoveHint": "Sign language is on. Drag the window to move it, or use Settings to move or resize it.",
-  "signTurnOnFirst": "Turn on Sign language first, then choose where its window goes and how big it is."
+  "signTurnOnFirst": "Turn on Sign language first, then choose where its window goes and how big it is.",
+  "lessonPreparing": "This lesson is still being prepared. Try again in a few minutes.",
+  "lessonFailed": "This lesson could not be prepared. Please tell the lesson provider.",
+  "automaticTrack": "{language} (automatic)",
+  "automaticNote": "Automatic captions: they may have mistakes.",
+  "captionsNone": "There are no captions for this lesson yet.",
+  "signNoneNoCaptions": "There is no sign language video for this lesson yet."
 }

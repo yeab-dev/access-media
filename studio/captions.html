@@ -132,7 +132,12 @@ const toVtt = () => `WEBVTT\n\n${cues.map((c, i) => `${i + 1}\n${vttTime(c.start
 // ---------- loading ----------
 async function loadLessons() {
   const { lessons } = await (await fetch(`${api}/lessons`)).json();
-  $('lesson').innerHTML = lessons.map((l) => `<option value="${l.id}">${l.title}</option>`).join('');
+  // Lessons still being converted have no video yet.
+  $('lesson').innerHTML = lessons.filter((l) => l.status === 'ready' || l.status === 'captioning')
+    .map((l) => `<option value="${l.id}">${l.title.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)}</option>`).join('');
+  // ?lesson=<id> opens that lesson (the "Add a lesson" page links here).
+  const wanted = new URLSearchParams(location.search).get('lesson');
+  if (wanted && lessons.some((l) => l.id === wanted)) $('lesson').value = wanted;
   await chooseLesson();
 }
 async function chooseLesson() {
@@ -142,9 +147,9 @@ async function chooseLesson() {
   const opts = [];
   for (const k of ['captions', 'descriptions']) {
     for (const l of ['en', 'am']) {
-      const has = lesson.tracks.some((t) => t.kind === k && t.srclang === l);
+      const has = lesson.tracks.find((t) => t.kind === k && t.srclang === l);
       const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(l);
-      opts.push(`<option value="${k}:${l}">${k === 'captions' ? 'Captions' : 'Audio description'}: ${name}${has ? '' : ' (new)'}</option>`);
+      opts.push(`<option value="${k}:${l}">${k === 'captions' ? 'Captions' : 'Audio description'}: ${name}${!has ? ' (new)' : has.auto ? ' (automatic, not checked)' : ''}</option>`);
     }
   }
   $('track').innerHTML = opts.join('');
@@ -156,7 +161,9 @@ async function chooseTrack() {
   cues = t ? parseVtt(await (await fetch(t.src, { cache: 'no-cache' })).text()) : [];
   hideErrors();
   render();
-  say(t ? `Loaded ${cues.length} lines.` : 'This track is new: add lines, or get a draft from the speech model.');
+  say(!t ? 'This track is new: add lines, or get a draft from the speech model.'
+    : t.auto ? `Loaded ${cues.length} lines made by the speech model. Learners see them marked "automatic". Check every line and time, then save.`
+    : `Loaded ${cues.length} lines.`);
 }
 $('lesson').addEventListener('change', chooseLesson);
 $('track').addEventListener('change', chooseTrack);

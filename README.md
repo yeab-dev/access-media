@@ -31,6 +31,7 @@ Open **http://localhost:8080**.
 | `/savanna/pages/concept-with-navigation.html` | Inside Savanna, under the lesson banner |
 | `/savanna/pages/jobs.html` | Career gateway: job cards and "share your certificate" |
 | `/certificates/demo-learner` | The page an employer opens to check a certificate |
+| `/studio/lessons.html` | Add a lesson: upload a video, get automatic captions and the code for your page (staff) |
 | `/studio/sign.html` | Record an interpreter for a lesson (staff) |
 | `/studio/captions.html` | Correct captions and audio description (staff) |
 | `/docs` | API documentation you can try in the browser |
@@ -90,6 +91,7 @@ document.addEventListener('db-player:ready', (e) => e.detail);
 ```sh
 B=http://localhost:8080/api/v1; T="Authorization: Bearer $ADMIN_TOKEN"
 curl $B/lessons
+curl -X POST $B/lessons -H "$T" -F video=@lesson.mp4 -F "title=How to write a CV" -F lang=en   # 202; follow status below
 curl $B/lessons/demo
 curl "$B/lessons/demo/transcript?lang=am&format=txt"
 curl -L "$B/lessons/demo/document?lang=am"                          # lesson as HTML, pictures described
@@ -111,7 +113,7 @@ curl $B/webhooks -H "$T"
 curl -X DELETE $B/webhooks/<id> -H "$T"
 ```
 
-**Webhook:** we POST `{ event, time, data }` for `sign.recorded`, `sign.requested`, `captions.updated`, `certificate.issued`, with `X-DB-Signature: sha256=<HMAC-SHA256 of the body with your secret>`. No learner names are sent. One attempt, 5-second timeout.
+**Webhook:** we POST `{ event, time, data }` for `lesson.ready`, `sign.recorded`, `sign.requested`, `captions.updated`, `certificate.issued`, with `X-DB-Signature: sha256=<HMAC-SHA256 of the body with your secret>`. No learner names are sent. One attempt, 5-second timeout.
 
 ## Install, Level 3: open standards
 
@@ -159,13 +161,15 @@ Rough, for **3,000 learners a month**, assuming each watches 20 ten-minute lesso
 
 ## Caption quality
 
+**Automatic captions for new lessons:** when a provider adds a lesson (`/studio/lessons.html` or `POST /api/v1/lessons`) and a speech model is set up, captions in the spoken language are made without any caption file from the provider. Learners see them at once, labelled "English (automatic)" with a visible note that they may have mistakes, until a person checks and saves them in the caption editor. Without a speech model the lesson is still converted and ready; captions are then added by hand.
+
 Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcriptions` server; `docker compose --profile asr up` starts faster-whisper locally). A person corrects every line in `/studio/captions.html`. `node scripts/caption-quality.mjs draft.vtt corrected.vtt` reports the word error rate and timing drift.
 
 **Honestly:** the demo lesson is silent placeholder slides, so **we have not measured draft quality on real English or Amharic speech.** Whisper's Amharic is known to be weak; plan for a person to rewrite most Amharic lines.
 
 ## Finished and not finished
 
-**Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, the API with documentation and a webhook, Docker. 35 unit tests and 64 browser tests, with axe-core showing zero critical or serious issues on every page we built.
+**Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, lesson upload with automatic captions, the API with documentation and a webhook, Docker. 40 unit tests and 73 browser tests, with axe-core showing zero critical or serious issues on every page we built.
 
 **Not finished:**
 - The **sign language video is a placeholder**. A real ESL recording is needed: use `/studio/sign.html` with an interpreter.

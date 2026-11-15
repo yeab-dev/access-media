@@ -63,6 +63,8 @@ components:
         label: { type: string, example: አማርኛ }
         src: { type: string, format: uri }
         reviewed: { type: boolean, description: True when a person checked it. }
+        auto: { type: boolean, description: 'Made by the speech model and not checked yet. The player labels it "(automatic)".' }
+        model: { type: string, description: Speech model that made an automatic track. }
     Lesson:
       type: object
       properties:
@@ -70,6 +72,11 @@ components:
         title: { type: string, example: How to write a CV }
         titles: { type: object, additionalProperties: { type: string }, example: { am: ሲቪ እንዴት እንደሚጻፍ } }
         lang: { type: string }
+        status:
+          type: string
+          enum: [processing, captioning, ready, failed]
+          description: 'Uploaded lessons only (absent = ready). processing: converting the video; captioning: plays already, captions coming.'
+        statusMessage: { type: string, description: What is happening, in words. }
         duration: { type: number, description: Seconds. }
         poster: { type: string, format: uri }
         sources:
@@ -144,7 +151,38 @@ paths:
                     type: array
                     items:
                       type: object
-                      properties: { id: { type: string }, title: { type: string }, lang: { type: string }, duration: { type: number }, href: { type: string } }
+                      properties: { id: { type: string }, title: { type: string }, lang: { type: string }, duration: { type: number }, status: { type: string }, href: { type: string } }
+    post:
+      tags: [Lessons]
+      summary: Add a lesson from a video, with automatic captions
+      description: |
+        Answers at once (202). In the background the server converts the video (360p, 240p ~200 kbps, 32 kbps MP3, poster),
+        then, when a speech model is set up (ASR_URL, local only), writes captions in the spoken language, marked `auto`.
+        Follow `GET /api/v1/lessons/{id}` until `status` is `ready` (or `failed`, with `statusMessage` in words).
+        The `lesson.ready` webhook fires when it is done. Browser form: /studio/lessons.html.
+      security: [{ staff: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video, title]
+              properties:
+                video: { type: string, format: binary, description: 'MP4, WebM or MOV, up to 1 GB.' }
+                title: { type: string, maxLength: 200, example: How to write a CV }
+                lang: { type: string, default: en, description: Language spoken in the video; captions are made in it. }
+                id: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: Optional; made from the title if left out. }
+      responses:
+        '202':
+          description: Accepted; being prepared
+          headers: { Location: { schema: { type: string, format: uri } } }
+          content:
+            application/json:
+              example: { id: how-to-write-a-cv, status: processing, statusMessage: Converting the video for slow connections., href: 'https://YOUR-SERVER/api/v1/lessons/how-to-write-a-cv', embed: '<db-player lesson="how-to-write-a-cv"></db-player>' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
 
   /api/v1/lessons/{id}:
     get:
@@ -350,7 +388,7 @@ paths:
       summary: Register an address to be told when something happens
       description: |
         We POST `{ event, time, data }` with headers `X-DB-Event` and `X-DB-Signature: sha256=<HMAC-SHA256 of the body with your secret>`.
-        Events: sign.recorded, sign.requested, captions.updated, certificate.issued. No learner names are sent.
+        Events: lesson.ready, sign.recorded, sign.requested, captions.updated, certificate.issued. No learner names are sent.
         The secret is returned once, when you register.
       security: [{ staff: [] }]
       requestBody:
@@ -362,7 +400,7 @@ paths:
               required: [url]
               properties:
                 url: { type: string, format: uri }
-                events: { type: array, items: { type: string, enum: [sign.recorded, sign.requested, captions.updated, certificate.issued] } }
+                events: { type: array, items: { type: string, enum: [lesson.ready, sign.recorded, sign.requested, captions.updated, certificate.issued] } }
       responses:
         '201': { description: 'Registered: { id, url, events, secret, createdAt }' }
         '400': { $ref: '#/components/responses/Error' }

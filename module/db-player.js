@@ -106,6 +106,9 @@ video { display: block; width: 100%; height: 100%; object-fit: contain; }
   font-size: calc(var(--cc-scale, 1) * clamp(14px, 4.2cqi, 30px)); color: var(--cc-fg, #fff); background: var(--cc-bg, #000);
   padding: 0.15em 0.5em; border-radius: 4px; }
 .cc-text:empty { display: none; }
+.cc-auto { position: absolute; inset-block-start: 0.5rem; inset-inline-start: 0.5rem; margin: 0; max-width: calc(100% - 1rem); padding: 0.2rem 0.6rem;
+  border-radius: 4px; background: rgb(0 0 0 / 0.8); color: #fff; font-size: 0.85rem; line-height: 1.4; pointer-events: none; }
+.cc-auto[hidden] { display: none; }
 .cc-text.no-bg { text-shadow: 0 0 3px #000, 0 0 3px #000, 1px 1px 2px #000; }
 .message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; color: #fff; text-align: center; font-size: 1.1rem; }
 .message:empty { display: none; }
@@ -307,6 +310,11 @@ class DbPlayer extends HTMLElement {
     this.#root.innerHTML = `<style>${STYLE}</style><div class="player" lang="${this.uiLang}"><div class="stage"><div class="message" role="status">${t.loading}</div></div></div>`;
     try {
       const manifest = this.getAttribute('lesson') ? await this.#fetchLesson() : this.#lessonFromAttributes();
+      if (manifest.status === 'processing' || manifest.status === 'failed') {
+        const msg = this.#root.querySelector('.message');
+        msg.textContent = manifest.status === 'processing' ? t.lessonPreparing : t.lessonFailed;
+        return;
+      }
       if (!manifest.sources.length) throw new Error('no video source: set src="..." or lesson="..."');
       this.#manifest = manifest;
       this.#render(manifest);
@@ -329,7 +337,8 @@ class DbPlayer extends HTMLElement {
       ...m,
       poster: abs(m.poster),
       sources: (m.sources || []).map((x) => ({ ...x, src: abs(x.src) })),
-      tracks: (m.tracks || []).map((x) => ({ ...x, src: abs(x.src) })),
+      // Captions from the speech model that nobody has checked yet say so: "English (automatic)".
+      tracks: (m.tracks || []).map((x) => ({ ...x, src: abs(x.src), label: x.auto ? fill(this.t.automaticTrack, { language: x.label }) : x.label })),
       sign: m.sign?.src ? { ...m.sign, src: abs(m.sign.src) } : null,
       describeAudio: abs(m.describeAudio),
       offline: abs(m.links?.offlinePack),
@@ -390,6 +399,7 @@ class DbPlayer extends HTMLElement {
         ${descTracks.map((tr, i) => `<track kind="descriptions" srclang="${escapeAttr(tr.srclang)}" label="${escapeAttr(tr.label)}" src="${escapeAttr(tr.src)}" data-kind="descriptions" data-i="${i}">`).join('')}
       </video>
       <div class="cc" aria-hidden="true"><span class="cc-text"></span></div>
+      <p class="cc-auto" hidden>${t.automaticNote}</p>
       <div class="message"></div>
     </div>
     ${hasSign ? `<div class="sign" hidden tabindex="0" role="group" aria-label="${t.signWindow}" aria-describedby="ap-sign-help">
@@ -437,7 +447,7 @@ class DbPlayer extends HTMLElement {
         <div class="field"><label for="ap-cc-select">${t.captionLanguage}</label>
           <select id="ap-cc-select" class="cc-select">
             <option value="">${t.off}</option>
-            ${captionTracks.map((tr, i) => `<option value="${i}" lang="${escapeAttr(tr.srclang)}">${escapeHtml(tr.label)}</option>`).join('')}
+            ${captionTracks.map((tr, i) => `<option value="${i}" lang="${escapeAttr(tr.srclang)}"${tr.auto ? ' data-auto=""' : ''}>${escapeHtml(tr.label)}</option>`).join('')}
           </select>
         </div>
         <div class="field"><label for="ap-cc-size">${t.size}</label><select id="ap-cc-size" class="cc-size">${Object.keys(SIZES).map((k) => `<option value="${k}">${t.sizes[k]}</option>`).join('')}</select></div>
@@ -505,7 +515,7 @@ class DbPlayer extends HTMLElement {
 
     const $ = (sel) => this.#root.querySelector(sel);
     const els = this.#els = {
-      player: $('.player'), media: $('.media'), stage: $('.stage'), video: $('video.main'), cc: $('.cc-text:not(.sample)'), sample: $('.sample'),
+      player: $('.player'), media: $('.media'), stage: $('.stage'), video: $('video.main'), cc: $('.cc-text:not(.sample)'), ccAuto: $('.cc-auto'), sample: $('.sample'),
       message: $('.message'), seek: $('.seek'), cur: $('.cur'), dur: $('.dur'),
       play: $('.play'), back: $('.back'), forward: $('.forward'), mute: $('.mute'), volume: $('.volume'),
       ccSelect: $('.cc-select'), settingsBtn: $('.settings-btn'), settingsPanel: $('.settings-panel'),
@@ -646,14 +656,15 @@ class DbPlayer extends HTMLElement {
     els.signBtn.addEventListener('click', () => {
       if (els.sign) { this.#setSign(els.sign.hidden, true); return; }
       // No interpreter video for this lesson yet: say so in words, and let the host know it was wanted.
-      els.note.textContent = t.signNone;
+      const signNone = captionTracks.length ? t.signNone : t.signNoneNoCaptions;
+      els.note.textContent = signNone;
       this.#emit('sign-requested', { lesson: this.#manifest.id });
       // Lessons from our API: count the request (anonymous) so interpreters know what to record next.
       if (this.getAttribute('lesson') && !this.#signAsked) {
         this.#signAsked = true;
         const api = (this.getAttribute('api') || scriptOrigin).replace(/\/$/, '');
         fetch(`${api}/api/v1/lessons/${encodeURIComponent(this.getAttribute('lesson'))}/sign-requests`, { method: 'POST' })
-          .then((r) => { if (r.ok) els.note.textContent = `${t.signNone} ${t.signRequested}`; })
+          .then((r) => { if (r.ok) els.note.textContent = `${signNone} ${t.signRequested}`; })
           .catch(() => {});
       }
     });
@@ -1054,6 +1065,11 @@ class DbPlayer extends HTMLElement {
 
   #toggleCaptions() {
     const sel = this.#els.ccSelect;
+    // A lesson with no captions yet: say so in words, rather than a button that only says "Captions off".
+    if (![...sel.options].some((o) => o.value !== '')) {
+      this.#els.note.textContent = this.t.captionsNone;
+      return;
+    }
     if (sel.value === '') {
       // On in the learner's language when the lesson has it; otherwise the last one used.
       const own = [...sel.options].findIndex((o) => o.lang === this.uiLang);
@@ -1069,6 +1085,7 @@ class DbPlayer extends HTMLElement {
     const value = els.ccSelect.value;
     els.ccBtn?.setAttribute('aria-pressed', String(value !== ''));
     els.cc.textContent = '';
+    els.ccAuto.hidden = value === '' || !els.ccSelect.selectedOptions[0]?.hasAttribute('data-auto');
     if (value === '') {
       this.#prefs.captions = null;
       if (announce) this.#announce(t.captionsOff);

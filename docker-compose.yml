@@ -20,8 +20,12 @@ services:
   asr:
     profiles: ["asr"]
     image: ghcr.io/speaches-ai/speaches:latest-cpu
+    # Only this computer can reach it (for `npm start` with ASR_URL=http://localhost:8000).
+    ports: ["127.0.0.1:8000:8000"]
     environment:
       - WHISPER__MODEL=Systran/faster-whisper-small
+      # Hugging Face's newer "xet" downloader hung on our network; plain HTTPS downloads work.
+      - HF_HUB_DISABLE_XET=1
     volumes:
       - asr-models:/home/ubuntu/.cache/huggingface
     restart: unless-stopped
