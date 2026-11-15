@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isValidVtt, parseVtt } from './vtt.js';
 import { requireStaff } from './sign.js';
+import { mayChange, notYours } from './auth.js';
 import { events } from './events.js';
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -46,8 +47,28 @@ function ffmpeg(args) {
  * Captions from the speech model for one media file. Throws with code 'no_speech_model' if ASR_URL is not set,
  * 'speech_model_error' if the model answers with an error. Used for editor drafts and for new uploads.
  */
+/** The speech model's address. Accepts "host:port" (as Render gives for private services) or a full URL. */
+export function asrUrl() {
+  const raw = (process.env.ASR_URL || '').trim().replace(/\/$/, '');
+  if (!raw) return '';
+  return /^https?:\/\//.test(raw) ? raw : `http://${raw}`;
+}
+
+/** Ask the speech server to download the model now, so the first lesson does not wait for it. Harmless if it has it. */
+export async function warmUpSpeechModel() {
+  const asr = asrUrl();
+  if (!asr) return;
+  const model = process.env.ASR_MODEL || 'Systran/faster-whisper-small';
+  try {
+    const r = await fetch(`${asr}/v1/models/${model}`, { method: 'POST', signal: AbortSignal.timeout(30 * 60_000) });
+    console.log(`speech model ${model}: ${r.ok ? 'ready' : `not ready (${r.status})`}`);
+  } catch (err) {
+    console.warn(`speech model ${model}: could not reach ${asr} (${err.message}). Automatic captions will fail until it is up.`);
+  }
+}
+
 export async function transcribe(mediaFile, lang) {
-  const asr = process.env.ASR_URL;
+  const asr = asrUrl();
   if (!asr) throw Object.assign(new Error('No speech model is set up (ASR_URL).'), { code: 'no_speech_model' });
   const model = process.env.ASR_MODEL || 'Systran/faster-whisper-small';
   const work = await mkdtemp(path.join(tmpdir(), 'db-asr-'));
@@ -60,7 +81,7 @@ export async function transcribe(mediaFile, lang) {
     form.append('model', model);
     form.append('language', lang);
     form.append('response_format', 'vtt');
-    const r = await fetch(`${asr.replace(/\/$/, '')}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(10 * 60_000) });
+    const r = await fetch(`${asr}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(10 * 60_000) });
     if (!r.ok) throw Object.assign(new Error(`The speech model answered with an error (${r.status}).`), { code: 'speech_model_error' });
     let vtt = await r.text();
     if (!isValidVtt(vtt)) vtt = `WEBVTT\n\n${vtt}`;
@@ -89,6 +110,7 @@ export function captionsRouter({ lessonsDir }) {
 
     let manifest;
     try { manifest = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, manifest.owner)) return notYours(res);
     const file = KINDS[kind](lang);
     const full = path.join(dirOf(id), file);
     await copyFile(full, `${full}.previous`).catch(() => {}); // keep the last version, in case
@@ -120,6 +142,7 @@ export function captionsRouter({ lessonsDir }) {
     }
     let manifest;
     try { manifest = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, manifest.owner)) return notYours(res);
     const src = (manifest.sources || []).find((s) => s.quality === 'audio') || manifest.sources?.[0];
     try {
       const { vtt, model } = await transcribe(path.join(dirOf(id), src.src), lang);

@@ -66,7 +66,7 @@
   <section aria-labelledby="h-1">
     <h2 id="h-1">1. Choose what to edit</h2>
     <div class="row">
-      <div><label for="code">Staff access code</label><input id="code" type="password" autocomplete="current-password"></div>
+      <div><label for="code">Your API key</label><input id="code" type="password" autocomplete="current-password" aria-describedby="code-hint"><p id="code-hint" class="tips">No key yet? <a href="/get-key">Get your key</a>.</p></div>
       <div><label for="lesson">Lesson</label><select id="lesson"></select></div>
       <div><label for="track">Track</label><select id="track"></select></div>
       <div><button type="button" id="draft">Get a draft from the speech model</button></div>
@@ -98,7 +98,17 @@ let lesson = null, cues = [], lang = 'en', kind = 'captions';
 
 function say(text, kind = '') { $('status').className = `status ${kind}`; $('status').textContent = ''; setTimeout(() => { $('status').textContent = text; }, 30); }
 try { $('code').value = sessionStorage.getItem('studio-code') || ''; } catch {}
-$('code').addEventListener('change', () => { try { sessionStorage.setItem('studio-code', $('code').value); } catch {} });
+$('code').addEventListener('change', () => { try { sessionStorage.setItem('studio-code', $('code').value); } catch {} loadLessons(); });
+// With a key: your own lessons (the master key: all). Without one: every lesson, to look at.
+async function listLessons() {
+  const key = $('code').value.trim();
+  if (key) {
+    const r = await fetch(`${api}/me/lessons`, { headers: { Authorization: `Bearer ${key}` } }).catch(() => null);
+    if (r?.ok) return (await r.json()).lessons;
+  }
+  return (await (await fetch(`${api}/lessons`)).json()).lessons;
+}
+
 
 // ---------- time text ----------
 function parseTime(s) {
@@ -131,14 +141,16 @@ const toVtt = () => `WEBVTT\n\n${cues.map((c, i) => `${i + 1}\n${vttTime(c.start
 
 // ---------- loading ----------
 async function loadLessons() {
-  const { lessons } = await (await fetch(`${api}/lessons`)).json();
+  const lessons = await listLessons();
+  const keep = $('lesson').value; // reloading (a new key) keeps the lesson that is open
   // Lessons still being converted have no video yet.
   $('lesson').innerHTML = lessons.filter((l) => l.status === 'ready' || l.status === 'captioning')
     .map((l) => `<option value="${l.id}">${l.title.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)}</option>`).join('');
   // ?lesson=<id> opens that lesson (the "Add a lesson" page links here).
-  const wanted = new URLSearchParams(location.search).get('lesson');
+  const wanted = keep || new URLSearchParams(location.search).get('lesson');
   if (wanted && lessons.some((l) => l.id === wanted)) $('lesson').value = wanted;
-  await chooseLesson();
+  if (!$('lesson').value) { say('You have no lessons yet. Add one on the "Add a lesson" page.'); return; }
+  if (lesson?.id !== $('lesson').value) await chooseLesson();
 }
 async function chooseLesson() {
   lesson = await (await fetch(`${api}/lessons/${$('lesson').value}`)).json();
@@ -335,7 +347,7 @@ $('draft').addEventListener('click', async () => {
 
 $('save').addEventListener('click', async () => {
   if (!showErrors()) return;
-  if (!$('code').value) { say('Enter the staff access code first (step 1).', 'bad'); $('code').focus(); return; }
+  if (!$('code').value) { say('Enter your API key first (step 1).', 'bad'); $('code').focus(); return; }
   try {
     const res = await fetch(`${api}/lessons/${lesson.id}/captions`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${$('code').value}` },

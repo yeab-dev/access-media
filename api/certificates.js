@@ -54,7 +54,7 @@ export function certificatesRouter({ dataDir, publicUrl }) {
   const pages = express.Router();
   const dir = path.join(dataDir, 'certificates');
   const keys = issuerKeys(dataDir);
-  const base = (req) => publicUrl || `${req.protocol}://${req.get('host')}`;
+  const base = (req) => publicUrl || process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`;
   const kid = (req) => `${base(req)}/.well-known/jwks.json#issuer`;
 
   const read = async (id) => JSON.parse(await readFile(path.join(dir, `${id}.json`), 'utf8'));
@@ -65,10 +65,11 @@ export function certificatesRouter({ dataDir, publicUrl }) {
     return { stored, payload, valid: !!payload && payload.jti === stored.credential.id };
   }
 
-  async function issue(req, { learnerName, achievement, id = b64(randomBytes(9)) }) {
+  async function issue(req, { learnerName, achievement, issuedBy = null, id = b64(randomBytes(9)) }) {
     const now = new Date();
     const url = `${base(req)}/api/v1/certificates/${id}`;
-    const issuer = { id: `${base(req)}/api/v1/issuer`, type: ['Profile'], name: 'Digital Bridge (test issuer)' };
+    // The organisation that awards it, signed with this server's key.
+    const issuer = { id: `${base(req)}/api/v1/issuer`, type: ['Profile'], name: issuedBy ? `${issuedBy} (via Digital Bridge)` : 'Digital Bridge (test issuer)' };
     const credential = {
       '@context': ['https://www.w3.org/ns/credentials/v2', 'https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json'],
       id: url,
@@ -103,9 +104,9 @@ export function certificatesRouter({ dataDir, publicUrl }) {
     if (!achievement?.name || typeof achievement.name !== 'string') {
       return res.status(400).json({ error: 'invalid_achievement', message: 'Give the achievement a name, for example the course or lesson title.' });
     }
-    const { id, credential, jwt } = await issue(req, { learnerName: learnerName.trim(), achievement });
+    const { id, credential, jwt } = await issue(req, { learnerName: learnerName.trim(), achievement, issuedBy: req.who.provider?.name });
     // No learner name in the webhook: the host already has it.
-    events.emit('certificate.issued', { id, page: `${base(req)}/certificates/${id}`, achievement: achievement.name });
+    events.emit('certificate.issued', { id, page: `${base(req)}/certificates/${id}`, achievement: achievement.name, owner: req.who.provider?.id ?? null });
     res.status(201).json({ id, page: `${base(req)}/certificates/${id}`, credential, jwt });
   });
 
@@ -134,8 +135,8 @@ export function certificatesRouter({ dataDir, publicUrl }) {
   pages.get('/certificates/:id', async (req, res) => {
     const am = req.query.lang === 'am';
     const T = am
-      ? { title: 'የምስክር ወረቀት ማረጋገጫ', ok: '✓ ተረጋግጧል', okText: 'ይህ የምስክር ወረቀት በዲጂታል ብሪጅ ተሰጥቷል እና አልተለወጠም።', bad: '✗ ትክክል አይደለም', badText: 'ይህ የምስክር ወረቀት ሊረጋገጥ አልቻለም። ተቀይሮ ሊሆን ይችላል።', missing: 'ይህ የምስክር ወረቀት አልተገኘም።', who: 'ለማን', what: 'ምን', issuer: 'የሰጠው', when: 'መቼ', how: 'እንዴት ተረጋገጠ', howText: 'የምስክር ወረቀቱ በሰጪው ቁልፍ በዲጂታል ፊርማ ተፈርሟል። ይህ ገጽ ፊርማውን አሁን አረጋግጧል። ሶፍትዌር ለማረጋገጥ፦', other: 'English' }
-      : { title: 'Certificate check', ok: '✓ Verified', okText: 'This certificate was issued by Digital Bridge and has not been changed.', bad: '✗ Not valid', badText: 'This certificate could not be verified. It may have been changed.', missing: 'This certificate was not found.', who: 'Awarded to', what: 'For', issuer: 'Issued by', when: 'Date', how: 'How this was checked', howText: 'The certificate is digitally signed with the issuer\'s key. This page checked the signature just now. For software checks:', other: 'አማርኛ' };
+      ? { title: 'የምስክር ወረቀት ማረጋገጫ', ok: '✓ ተረጋግጧል', okText: 'ይህ የምስክር ወረቀት ከታች በተጠቀሰው ድርጅት ተሰጥቷል እና አልተለወጠም።', bad: '✗ ትክክል አይደለም', badText: 'ይህ የምስክር ወረቀት ሊረጋገጥ አልቻለም። ተቀይሮ ሊሆን ይችላል።', missing: 'ይህ የምስክር ወረቀት አልተገኘም።', who: 'ለማን', what: 'ምን', issuer: 'የሰጠው', when: 'መቼ', how: 'እንዴት ተረጋገጠ', howText: 'የምስክር ወረቀቱ በሰጪው ቁልፍ በዲጂታል ፊርማ ተፈርሟል። ይህ ገጽ ፊርማውን አሁን አረጋግጧል። ሶፍትዌር ለማረጋገጥ፦', other: 'English' }
+      : { title: 'Certificate check', ok: '✓ Verified', okText: 'This certificate was issued by the organisation named below and has not been changed.', bad: '✗ Not valid', badText: 'This certificate could not be verified. It may have been changed.', missing: 'This certificate was not found.', who: 'Awarded to', what: 'For', issuer: 'Issued by', when: 'Date', how: 'How this was checked', howText: 'The certificate is digitally signed with the issuer\'s key. This page checked the signature just now. For software checks:', other: 'አማርኛ' };
     const lang = am ? 'am' : 'en';
     let body;
     let status = 200;

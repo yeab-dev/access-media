@@ -1,86 +1,190 @@
 openapi: 3.1.0
 info:
-  title: Digital Bridge accessible learning media API
-  version: 1.0.0
-  summary: Lessons with captions, sign language and audio description; offline packs; documents; jobs; verifiable certificates.
+  title: Digital Bridge learning media API
+  version: 1.1.0
+  summary: Put accessible lessons on your website. Captions in English and Amharic, Ethiopian Sign Language, audio description, transcripts, offline packs, job cards and certificates.
   description: |
-    Level 2 of the Track 2 module (Digital Bridge Accessibility Hackathon 2026).
-    The player (`<db-player>`) and the job card (`<db-job-card>`) use these calls; other platforms can too.
+    ## Start here: three steps, about five minutes
 
-    * Reading is public and allowed from any site (CORS `*`). No account is needed to watch a lesson.
-    * Changing anything needs the staff access code: `Authorization: Bearer <ADMIN_TOKEN>`.
-    * Errors are JSON `{ "error": "<code>", "message": "<what to do, in words>" }` with 400, 401, 404, 502 or 503.
-    * Lesson files (video, captions, sign video) are served from `/media/{lesson}/...`.
+    **1. Get your key.** Open **[Get your key](/get-key)**, type your organisation's name, copy the key.
+    Back on this page, your key is already filled in. (If not: press **Authorize** below and paste it.)
+    Your key comes with a **practice lesson** that is yours, so you can try every call at once.
+
+    **2. Add a lesson.** Open **2. Lessons → `POST /api/v1/lessons`** below, choose your video file, give a title, press **Execute**.
+    The server makes the video small enough for 3G phones and writes captions from the speech in it.
+    Prefer the browser? Use the [Add a lesson](/studio/lessons.html) page.
+
+    **3. Put it on your page.** The answer has an `embed` field. Paste those two lines where the lesson should play:
+
+    ```html
+    <script type="module" src="https://THIS-SERVER/module/db-player.js"></script>
+    <db-player lesson="your-lesson-id"></db-player>
+    ```
+
+    That is all your website needs. Learners get captions they can resize and recolour, a sign language window they can move,
+    audio description, a transcript, keyboard and screen reader support, and "Download for offline".
+
+    ---
+
+    ## How to use this page
+
+    * Calls are grouped in the order you will need them: **1** to **6**. Open one to see what it does and an example.
+    * **"Try it out" is already on.** Change the example if you like, then press **Execute**. The answer appears below it.
+    * Under each answer, the **curl** box shows the same call to copy into a terminal or your own code.
+    * Calls with a 🔒 need your key. Reading calls (watching, transcripts, jobs) work without one.
+
+    ## Rules for every call
+
+    * **Your key** goes in a header: `Authorization: Bearer <your key>`. It only changes **your own** lessons, jobs, certificates and webhooks.
+    * **Answers are JSON.** When something is wrong you get `{ "error": "short_code", "message": "what to do, in words" }` with status 400 (fix your request), 401 (no or wrong key), 403 (not yours, or a limit reached), 404 (not found), 409 (conflict), 413 (file too large) or 503 (a feature is not set up on this server).
+    * **Limits for each key** on this server: shown in `GET /api/v1/me`.
+    * **Any website may read** (CORS `*`). Lesson files are served from `/media/<lesson id>/…`.
+    * **Privacy:** no learner accounts and no tracking. Lesson audio goes only to the speech model on this server. For a key we keep only the name you typed.
+
+    ## Player options
+
+    | Attribute | What it does |
+    |---|---|
+    | `lesson` | The lesson id (from step 2). |
+    | `lang` | First language of the controls: `en` or `am`. Learners can change it; their choice is remembered. |
+    | `theme` | `auto` (default, follows the device), `light` or `dark`. If your site uses Bootstrap, the player takes its colour and font. |
+    | `api` | Only if the player script comes from a different server than your lessons. |
+    | `heading-level` | Heading level of the transcript (default 2), to fit your page's outline. |
+
+    Don't add your own language buttons: the player has one switch that changes the controls, captions and audio description together.
+
+    **Without this server** (Level 1): give the files directly. Caption language comes from the file name.
+    ```html
+    <db-player src="lesson.mp4" captions="lesson.en.vtt,lesson.am.vtt" sign="lesson.ethsl.mp4" describe="lesson.ad.en.vtt"></db-player>
+    ```
+
+    ## Events on your page
+
+    The player tells your page what the learner does. Use them to mark lessons done or save progress.
+    ```js
+    document.addEventListener('db-player:complete', (e) => e.detail);  // { lesson }
+    document.addEventListener('db-player:progress', (e) => e.detail);  // { lesson, seconds, percent } about every 5 s
+    document.addEventListener('db-player:prefs', (e) => e.detail);     // caption size, colour, sign window place…
+    document.addEventListener('db-player:sign-requested', (e) => e.detail); // learner wants sign language that is not there yet
+    ```
+
+    ## Job cards
+
+    ```html
+    <script type="module" src="https://THIS-SERVER/module/db-job-card.js"></script>
+    <db-job-card job="your-job-id"></db-job-card>
+    ```
+    Each card has "Listen to summary", dates in the Ethiopian and Gregorian calendars, and an Apply link.
+    On pages without a player, `<db-language></db-language>` gives the same language switch.
+
+    ## Open standards (Level 3)
+
+    Captions and descriptions are **WebVTT**; jobs come with **schema.org JobPosting**; certificates are **Open Badges 3.0** (signed VC-JWT, EdDSA).
+    The whole description of this API: [openapi.yaml](/openapi.yaml).
   license:
     name: To be confirmed (the open licence ALX names)
-servers:
-  - url: http://localhost:8080
-    description: docker compose up
+
 tags:
-  - name: Lessons
-  - name: Sign language
-  - name: Captions
-  - name: Jobs
-  - name: Certificates
-  - name: Webhooks
+  - name: 1. Get started
+    description: Your key, and what it allows. Start with **Get your key**, or use the [Get your key](/get-key) page.
+  - name: 2. Lessons
+    description: Add a lesson from a video, see your lessons with the code for each page, change titles, delete. Plus what learners get from each lesson, made for you. Transcript, document (HTML and tagged PDF) and offline pack.
+  - name: 3. Captions and descriptions
+    description: |
+      **Captions**: what is said, for Deaf and hard of hearing learners. **Audio description**: what is on screen, read aloud for blind learners.
+      Both are WebVTT text, one file per language. **Slides**: a title and a picture description for each slide, used in the lesson document.
+      Prefer the browser? The [caption editor](/studio/captions.html) does all of this with the video beside you.
+  - name: 4. Sign language
+    description: Ethiopian Sign Language videos, kept in time with the lesson. Easiest in the browser with an interpreter at the [sign language studio](/studio/sign.html).
+  - name: 5. Jobs and certificates
+    description: The career gateway. Job cards that read themselves aloud, and certificates that employers can check.
+  - name: 6. Connect your systems
+    description: Webhooks. Your server is told when something happens.
 
 components:
   securitySchemes:
-    staff:
+    apiKey:
       type: http
       scheme: bearer
-      description: The ADMIN_TOKEN set in .env.
+      description: |
+        Your API key from [Get your key](/get-key) (it starts with `dbk_`). The host's master key (ADMIN_TOKEN) also works here.
   parameters:
     lessonId:
       name: id
       in: path
       required: true
+      description: The lesson id, for example from `GET /api/v1/me/lessons`. Your practice lesson's id starts with `practice-`.
       schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$' }
       example: demo
     lang:
       name: lang
       in: query
-      schema: { type: string, example: am }
-      description: Language code, for example `en` or `am`.
+      description: Language code. `en` English, `am` Amharic, or any other language the lesson has.
+      schema: { type: string, example: en }
+    jobId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: junior-frontend
   responses:
     Error:
-      description: Something is wrong; the message says what, in words.
+      description: Something is wrong. The message says what to do, in words.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    Unauthorised:
+      description: No key, or the key does not work.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: unauthorised, message: 'This needs your API key. Send it as "Authorization: Bearer <your key>". Get a key at /get-key.' }
+    NotYours:
+      description: It belongs to another provider, or you reached a limit.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: not_yours, message: This lesson belongs to another provider. Your key can only change your own. }
+    NotFound:
+      description: Not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: not_found, message: There is no lesson with this id. }
   schemas:
     Error:
       type: object
       required: [error, message]
       properties:
-        error: { type: string, example: not_found }
-        message: { type: string, example: There is no lesson with this id. }
+        error: { type: string, description: A short code your program can check., example: not_found }
+        message: { type: string, description: 'What went wrong and what to do, in words.', example: There is no lesson with this id. }
+        problems: { type: array, items: { type: string }, description: 'Every problem found, when there is more than one.' }
     Track:
       type: object
       properties:
-        kind: { type: string, enum: [captions, subtitles, descriptions] }
+        kind: { type: string, enum: [captions, subtitles, descriptions], description: '`captions` = what is said; `descriptions` = audio description.' }
         srclang: { type: string, example: am }
         label: { type: string, example: አማርኛ }
         src: { type: string, format: uri }
-        reviewed: { type: boolean, description: True when a person checked it. }
-        auto: { type: boolean, description: 'Made by the speech model and not checked yet. The player labels it "(automatic)".' }
-        model: { type: string, description: Speech model that made an automatic track. }
+        reviewed: { type: boolean, description: A person checked it. }
+        auto: { type: boolean, description: 'Made by the speech model and not checked yet. Learners see "(automatic)".' }
     Lesson:
       type: object
       properties:
         id: { type: string, example: demo }
         title: { type: string, example: How to write a CV }
-        titles: { type: object, additionalProperties: { type: string }, example: { am: ሲቪ እንዴት እንደሚጻፍ } }
-        lang: { type: string }
+        titles: { type: object, additionalProperties: { type: string }, description: The title in other languages., example: { am: ሲቪ እንዴት እንደሚጻፍ } }
+        lang: { type: string, description: Language spoken in the video., example: en }
         status:
           type: string
           enum: [processing, captioning, ready, failed]
-          description: 'Uploaded lessons only (absent = ready). processing: converting the video; captioning: plays already, captions coming.'
-        statusMessage: { type: string, description: What is happening, in words. }
-        duration: { type: number, description: Seconds. }
+          description: '`processing`: converting the video. `captioning`: plays already, captions coming. `ready`. `failed`: see statusMessage.'
+        statusMessage: { type: string, description: 'What is happening, in words.' }
+        duration: { type: number, description: Length in seconds. }
         poster: { type: string, format: uri }
         sources:
           type: array
+          description: The same lesson in sizes for different connections. The player picks the right one.
           items:
             type: object
             properties:
@@ -89,78 +193,151 @@ components:
               type: { type: string, example: video/mp4 }
         tracks: { type: array, items: { $ref: '#/components/schemas/Track' } }
         sign:
+          description: The sign language video, or null if there is none yet.
           oneOf:
             - type: 'null'
             - type: object
               properties:
                 src: { type: string, format: uri }
                 lang: { type: string, example: sgn-et }
-                placeholder: { type: boolean }
                 recordedAt: { type: string, format: date-time }
-                offset: { type: number }
         links:
           type: object
           properties:
             transcript: { type: string, format: uri }
             offlinePack: { type: string, format: uri }
             document: { type: string, format: uri }
+    MyLesson:
+      type: object
+      properties:
+        id: { type: string, example: how-to-write-a-cv }
+        title: { type: string, example: How to write a CV }
+        status: { type: string, example: ready }
+        statusMessage: { type: string }
+        captions: { type: array, items: { type: object, properties: { lang: { type: string }, automatic: { type: boolean } } }, example: [{ lang: en, automatic: true }] }
+        audioDescription: { type: array, items: { type: string }, example: [en] }
+        signLanguage: { type: boolean }
+        embed: { type: string, description: The two lines to paste into your page. }
+    Slide:
+      type: object
+      required: [time]
+      description: One slide. `time` plus text in one or more languages (each with a `title`, an `alt` description of the picture, or both).
+      properties:
+        time: { type: number, description: The second the slide appears., example: 5 }
+      additionalProperties:
+        type: object
+        properties:
+          title: { type: string, description: Short; used as a heading in the lesson document. }
+          alt: { type: string, description: 'What the picture shows, for people who cannot see it.' }
+    JobText:
+      type: object
+      required: [title, summary]
+      properties:
+        title: { type: string, example: Junior Front-End Developer }
+        summary: { type: string, description: 'Plain language. Read aloud by "Listen to summary".', example: 'Build and fix web pages using HTML, CSS and JavaScript. You work from home with a mentor.' }
     Job:
       type: object
       properties:
-        id: { type: string }
-        datePosted: { type: string, format: date }
-        validThrough: { type: string, format: date }
-        employmentType: { type: string, example: FULL_TIME }
+        id: { type: string, example: junior-frontend }
+        employer: { type: string, example: Test Employer PLC }
+        city: { type: string, example: Addis Ababa }
         remote: { type: boolean }
-        employer: { type: string }
-        city: { type: string }
-        apply: { type: string, format: uri }
+        employmentType: { type: string, enum: [FULL_TIME, PART_TIME, CONTRACTOR, TEMPORARY, INTERN, VOLUNTEER] }
+        datePosted: { type: string, format: date }
+        validThrough: { type: string, format: date, description: Closing date. }
+        apply: { type: string, description: 'Where to apply: https://… or mailto:…' }
         support:
           type: array
+          description: Support the employer offers.
           items: { type: string, enum: [interpreter, remote, flexible-hours, screen-reader, step-free] }
         en: { $ref: '#/components/schemas/JobText' }
         am: { $ref: '#/components/schemas/JobText' }
-        jsonLd: { type: object, description: 'schema.org JobPosting (Level 3).' }
-    JobText:
-      type: object
-      properties:
-        title: { type: string }
-        summary: { type: string }
-        audio: { type: string, description: Optional recorded summary (URL). }
+        jsonLd: { type: object, description: 'schema.org JobPosting: put it in a <script type="application/ld+json"> on your page so job search engines find the job.' }
 
 paths:
+  # ---------------------------------------------------------------- 1. Get started
+  /api/v1/keys:
+    post:
+      tags: [1. Get started]
+      summary: Get your key
+      description: |
+        Type your organisation's name and get a key at once. No email or password.
+        **The key is shown only once: copy it.** You also get a practice lesson that is yours to change.
+        Then press **Authorize** at the top of this page and paste the key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organisation]
+              properties:
+                organisation: { type: string, minLength: 2, maxLength: 80, description: Your organisation's name. It is shown on certificates you give. }
+            example: { organisation: Debo Learning }
+      responses:
+        '201':
+          description: Your key
+          content:
+            application/json:
+              example:
+                key: dbk_3VfQ…your-key…Xw
+                note: 'Keep this key safe: it is shown only once. Anyone with it can change your lessons.'
+                provider: { id: p_8f2a1c0d9e3b, name: Debo Learning }
+                limits: { lessons: 10, uploadMB: 200, jobs: 50, webhooks: 5 }
+                practiceLesson: { id: practice-4b1e2f, title: 'Practice lesson: How to write a CV', embed: "<script type=\"module\" src=\"https://THIS-SERVER/module/db-player.js\"></script>\n<db-player lesson=\"practice-4b1e2f\"></db-player>" }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { description: This server does not give out keys (SIGNUP is off)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '429': { description: Too many keys from your address in the last hour., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/v1/me:
+    get:
+      tags: [1. Get started]
+      summary: Check your key
+      description: Who the key belongs to, and the limits for each key on this server. A quick way to test that your key works.
+      security: [{ apiKey: [] }]
+      responses:
+        '200':
+          description: Your key works
+          content:
+            application/json:
+              example: { admin: false, provider: { id: p_8f2a1c0d9e3b, name: Debo Learning }, keyEndsWith: X3Xw, createdAt: '2026-11-16T07:30:00.000Z', limits: { lessons: 10, uploadMB: 200, jobs: 50, webhooks: 5 } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+
+  /api/v1/me/key:
+    post:
+      tags: [1. Get started]
+      summary: Make a new key (the old one stops working)
+      description: Use this if your key may have been seen by someone else. Your lessons stay yours. Copy the new key. It is shown only once.
+      security: [{ apiKey: [] }]
+      responses:
+        '201':
+          description: Your new key
+          content:
+            application/json:
+              example: { key: dbk_9kLm…new-key…Qa, note: 'Your old key no longer works. Keep this one safe: it is shown only once.' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+
   /api/v1/health:
     get:
+      tags: [1. Get started]
       summary: Is the server up?
       responses:
         '200': { description: OK, content: { application/json: { example: { ok: true } } } }
 
+  # ---------------------------------------------------------------- 2. Lessons
   /api/v1/lessons:
-    get:
-      tags: [Lessons]
-      summary: List lessons
-      responses:
-        '200':
-          description: Lessons
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  lessons:
-                    type: array
-                    items:
-                      type: object
-                      properties: { id: { type: string }, title: { type: string }, lang: { type: string }, duration: { type: number }, status: { type: string }, href: { type: string } }
     post:
-      tags: [Lessons]
-      summary: Add a lesson from a video, with automatic captions
+      tags: [2. Lessons]
+      summary: Add a lesson from a video
       description: |
-        Answers at once (202). In the background the server converts the video (360p, 240p ~200 kbps, 32 kbps MP3, poster),
-        then, when a speech model is set up (ASR_URL, local only), writes captions in the spoken language, marked `auto`.
-        Follow `GET /api/v1/lessons/{id}` until `status` is `ready` (or `failed`, with `statusMessage` in words).
-        The `lesson.ready` webhook fires when it is done. Browser form: /studio/lessons.html.
-      security: [{ staff: [] }]
+        Choose your video, give a title and the language spoken in it, press **Execute**.
+        The answer comes at once (202) with the lesson `id` and the `embed` code for your page. Then, in the background:
+        1. the video is made small for slow connections (360p, 240p, sound only, a poster picture);
+        2. if this server has a speech model, **captions are written from the speech**, marked "(automatic)" until a person checks them.
+
+        Check progress with `GET /api/v1/lessons/{id}`: `status` goes `processing` → `captioning` → `ready`.
+        Your webhook (step 6) gets `lesson.ready` when it is done.
+      security: [{ apiKey: [] }]
       requestBody:
         required: true
         content:
@@ -169,126 +346,163 @@ paths:
               type: object
               required: [video, title]
               properties:
-                video: { type: string, format: binary, description: 'MP4, WebM or MOV, up to 1 GB.' }
-                title: { type: string, maxLength: 200, example: How to write a CV }
-                lang: { type: string, default: en, description: Language spoken in the video; captions are made in it. }
-                id: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: Optional; made from the title if left out. }
+                video: { type: string, format: binary, description: 'The lesson video: MP4, WebM or MOV. Size limit: see GET /api/v1/me.' }
+                title: { type: string, maxLength: 200, description: 'The lesson''s name, heard by screen reader users.', example: How to write a CV }
+                lang: { type: string, default: en, description: 'Language spoken in the video: en, am, om, ti… Captions are made in this language.', example: en }
+                id: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: Optional. Made from the title if you leave it out. }
       responses:
         '202':
-          description: Accepted; being prepared
-          headers: { Location: { schema: { type: string, format: uri } } }
+          description: Accepted. Being prepared now.
+          headers: { Location: { description: Where to check progress., schema: { type: string, format: uri } } }
           content:
             application/json:
-              example: { id: how-to-write-a-cv, status: processing, statusMessage: Converting the video for slow connections., href: 'https://YOUR-SERVER/api/v1/lessons/how-to-write-a-cv', embed: '<db-player lesson="how-to-write-a-cv"></db-player>' }
+              example:
+                id: how-to-write-a-cv
+                status: processing
+                statusMessage: Converting the video for slow connections.
+                href: https://THIS-SERVER/api/v1/lessons/how-to-write-a-cv
+                embed: "<script type=\"module\" src=\"https://THIS-SERVER/module/db-player.js\"></script>\n<db-player lesson=\"how-to-write-a-cv\"></db-player>"
         '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-
-  /api/v1/lessons/{id}:
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '409': { description: That id is taken. Choose another or leave it out., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '413': { description: The video is larger than your limit., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     get:
-      tags: [Lessons]
-      summary: One lesson with all its files (absolute URLs)
-      parameters: [{ $ref: '#/components/parameters/lessonId' }]
-      responses:
-        '200': { description: The lesson, content: { application/json: { schema: { $ref: '#/components/schemas/Lesson' } } } }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-
-  /api/v1/lessons/{id}/transcript:
-    get:
-      tags: [Lessons]
-      summary: Transcript (captions and audio descriptions together)
-      parameters:
-        - { $ref: '#/components/parameters/lessonId' }
-        - { $ref: '#/components/parameters/lang' }
-        - { name: format, in: query, schema: { type: string, enum: [html, txt], default: html } }
+      tags: [2. Lessons]
+      summary: All lessons on this server (public)
       responses:
         '200':
-          description: The transcript
+          description: Lessons
           content:
-            text/html: {}
-            text/plain: {}
-        '404': { $ref: '#/components/responses/Error' }
+            application/json:
+              example: { lessons: [{ id: demo, title: How to write a CV, lang: en, duration: 30, status: ready, href: https://THIS-SERVER/api/v1/lessons/demo }] }
 
-  /api/v1/lessons/{id}/document:
+  /api/v1/me/lessons:
     get:
-      tags: [Lessons]
-      summary: The lesson as a document, with every picture described
-      description: HTML redirects to the generated page under /media. PDF is tagged (headings, figures with descriptions, reading order).
-      parameters:
-        - { $ref: '#/components/parameters/lessonId' }
-        - { $ref: '#/components/parameters/lang' }
-        - { name: format, in: query, schema: { type: string, enum: [html, pdf], default: html } }
-      responses:
-        '200': { description: PDF, content: { application/pdf: {} } }
-        '302': { description: Redirect to the HTML document }
-        '404': { $ref: '#/components/responses/Error' }
-        '503': { $ref: '#/components/responses/Error' }
-
-  /api/v1/lessons/{id}/offline-pack:
-    get:
-      tags: [Lessons]
-      summary: Offline pack for a 3G phone (one zip)
-      description: lesson.mp4 (240p), lesson.mp3, caption files, a light index.html that works from the phone's storage, README.txt. Supports Range, so downloads can resume.
-      parameters: [{ $ref: '#/components/parameters/lessonId' }]
-      responses:
-        '200': { description: The zip, content: { application/zip: {} } }
-        '206': { description: Part of the zip (Range request) }
-        '404': { $ref: '#/components/responses/Error' }
-
-  /api/v1/lessons/{id}/sign:
-    post:
-      tags: [Sign language]
-      summary: Attach an interpreter recording to a lesson
-      description: The recording is trimmed or padded by `offset` seconds, made small (360p) and its sound removed.
-      security: [{ staff: [] }]
-      parameters: [{ $ref: '#/components/parameters/lessonId' }]
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [video]
-              properties:
-                video: { type: string, format: binary }
-                offset: { type: number, minimum: -10, maximum: 10, description: 'Positive: cut this much from the start.' }
-      responses:
-        '201': { description: Saved }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-
-  /api/v1/lessons/{id}/sign-requests:
-    post:
-      tags: [Sign language]
-      summary: A learner asked for sign language on this lesson (anonymous count)
-      parameters: [{ $ref: '#/components/parameters/lessonId' }]
-      responses:
-        '201': { description: Counted }
-        '404': { $ref: '#/components/responses/Error' }
-
-  /api/v1/sign-requests:
-    get:
-      tags: [Sign language]
-      summary: Lessons learners want signed, most wanted first
+      tags: [2. Lessons]
+      summary: Your lessons, with the code for each page
+      description: Each lesson with its status, which captions and descriptions it has (and whether they are still automatic), sign language, and the `embed` code to paste.
+      security: [{ apiKey: [] }]
       responses:
         '200':
-          description: Requests
+          description: Your lessons, newest first
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  requests:
-                    type: array
-                    items: { type: object, properties: { id: { type: string }, title: { type: string }, count: { type: integer }, lastRequested: { type: string, format: date-time }, hasSign: { type: boolean } } }
+                  lessons: { type: array, items: { $ref: '#/components/schemas/MyLesson' } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
 
+  /api/v1/lessons/{id}:
+    get:
+      tags: [2. Lessons]
+      summary: One lesson with all its files
+      description: Everything the player needs. Use it to check progress after adding a lesson (`status`).
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '200': { description: The lesson, content: { application/json: { schema: { $ref: '#/components/schemas/Lesson' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [2. Lessons]
+      summary: Change a lesson's title (also in Amharic)
+      description: Send only what changes. `titles` adds or replaces titles in other languages; set one to `null` to remove it.
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 200 }
+                titles: { type: object, additionalProperties: { type: [string, 'null'] } }
+                lang: { type: string, description: Language spoken in the video. }
+            example: { title: How to write a CV, titles: { am: ሲቪ እንዴት እንደሚጻፍ } }
+      responses:
+        '200': { description: Changed, content: { application/json: { example: { id: how-to-write-a-cv, title: How to write a CV, titles: { am: ሲቪ እንዴት እንደሚጻፍ }, lang: en } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [2. Lessons]
+      summary: Delete a lesson and all its files
+      description: The video, captions, sign language, documents and offline pack are deleted. Pages that still show it will say the video could not be loaded. Cannot be undone.
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Still being prepared. Delete it when it is ready., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/v1/lessons/{id}/transcript:
+    get:
+      tags: [2. Lessons]
+      summary: Transcript (what is said, and audio description)
+      description: Made from the captions. The player already offers it to learners; use this for your own pages or downloads.
+      parameters:
+        - { $ref: '#/components/parameters/lessonId' }
+        - { $ref: '#/components/parameters/lang' }
+        - { name: format, in: query, description: '`html` for a web page, `txt` for a text file to download.', schema: { type: string, enum: [html, txt], default: html } }
+      responses:
+        '200': { description: The transcript, content: { text/html: {}, text/plain: {} } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/lessons/{id}/document:
+    get:
+      tags: [2. Lessons]
+      summary: The lesson as a document (web page or tagged PDF)
+      description: |
+        Headings in order, one section per slide, each picture described in words, and what is said under it.
+        The PDF is tagged, so screen readers can read it. Add slide descriptions with `PUT /lessons/{id}/slides` for the best result.
+      parameters:
+        - { $ref: '#/components/parameters/lessonId' }
+        - { $ref: '#/components/parameters/lang' }
+        - { name: format, in: query, schema: { type: string, enum: [html, pdf], default: html } }
+      responses:
+        '200': { description: The PDF, content: { application/pdf: {} } }
+        '302': { description: Goes to the web page. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { description: PDF printing is not set up on this server., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/v1/lessons/{id}/offline-pack:
+    get:
+      tags: [2. Lessons]
+      summary: Offline pack for slow phones (one zip)
+      description: The 240p video, the sound only, captions, and a light web page that works from the phone's storage. Downloads can resume. The player's "Download for offline" button uses this.
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '200': { description: The zip, content: { application/zip: {} } }
+        '206': { description: Part of the zip (resumed download). }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- 3. Captions and descriptions
   /api/v1/lessons/{id}/captions:
     post:
-      tags: [Captions]
-      summary: Upload or correct a caption (or audio description) file
-      security: [{ staff: [] }]
+      tags: [3. Captions and descriptions]
+      summary: Save captions or audio description (one language)
+      description: |
+        Send the whole file as WebVTT text: a time range, then the words. Saving replaces that language's file (the previous one is kept on the server, in case) and learners see it at once.
+        * `kind: captions` = what is said. Add meaningful sounds in brackets: `[music]`, `[phone rings]`.
+        * `kind: descriptions` = what is on screen, read aloud for blind learners. Keep each line short.
+        * A new language (for example `om`) is added to the player's language switch.
+
+        Example WebVTT:
+        ```
+        WEBVTT
+
+        00:00:00.500 --> 00:00:05.000
+        Welcome. In this lesson you will learn how to write a CV.
+
+        00:00:05.000 --> 00:00:10.000
+        [music] A CV is a short document about you.
+        ```
+      security: [{ apiKey: [] }]
       parameters: [{ $ref: '#/components/parameters/lessonId' }]
       requestBody:
         required: true
@@ -300,49 +514,207 @@ paths:
               properties:
                 kind: { type: string, enum: [captions, descriptions], default: captions }
                 lang: { type: string, example: am }
-                vtt: { type: string, description: WebVTT text }
-                source: { type: string, enum: [person, draft], default: person }
+                vtt: { type: string, description: The WebVTT text. }
+                source: { type: string, enum: [person, draft], default: person, description: '`person` = checked by a person. `draft` = not checked (learners see "(automatic)").' }
+            examples:
+              amharic:
+                summary: Amharic captions
+                value: { kind: captions, lang: am, vtt: "WEBVTT\n\n00:00:00.500 --> 00:00:05.000\nእንኳን ደህና መጡ። በዚህ ትምህርት ሲቪ እንዴት እንደሚጻፍ ይማራሉ።\n" }
+              description:
+                summary: English audio description
+                value: { kind: descriptions, lang: en, vtt: "WEBVTT\n\n00:00:00.500 --> 00:00:04.000\nTitle slide: How to write a CV.\n" }
       responses:
-        '201': { description: Saved }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '201': { description: Saved, content: { application/json: { example: { ok: true, kind: captions, lang: am, src: lesson.am.vtt, lines: 1 } } } }
+        '400': { description: 'Not valid WebVTT: the message says which line and why.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: invalid_vtt, message: 'Line 2: the end time must be after the start time.', problems: ['Line 2: the end time must be after the start time.'] } } } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/lessons/{id}/captions/draft:
     post:
-      tags: [Captions]
-      summary: First draft from the speech model (not saved)
-      description: Needs ASR_URL (an OpenAI-style /v1/audio/transcriptions server, e.g. local faster-whisper). Without it, 503 with a message.
-      security: [{ staff: [] }]
+      tags: [3. Captions and descriptions]
+      summary: Get a first draft of captions from the speech (not saved)
+      description: |
+        The speech model on this server listens to the lesson and writes timed lines. **Nothing is saved**: check the words, then save them with the call above.
+        Takes a few seconds to a few minutes. Amharic drafts need much more correcting than English ones.
+      security: [{ apiKey: [] }]
       parameters: [{ $ref: '#/components/parameters/lessonId' }]
       requestBody:
         content:
           application/json:
-            schema: { type: object, properties: { lang: { type: string, example: en } } }
+            schema: { type: object, properties: { lang: { type: string, description: Language spoken in the video., example: en } } }
+            example: { lang: en }
       responses:
-        '200': { description: Draft, content: { application/json: { schema: { type: object, properties: { vtt: { type: string }, model: { type: string }, lines: { type: integer } } } } } }
-        '503': { $ref: '#/components/responses/Error' }
+        '200': { description: The draft, content: { application/json: { example: { lang: en, vtt: "WEBVTT\n\n00:00:00.000 --> 00:00:03.000\nWe explain creativity in the workplace.\n", model: Systran/faster-whisper-small, lines: 1, note: 'Draft: a person must check every line and time before saving.' } } } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '502': { description: The speech model gave an error or could not be reached., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '503': { description: This server has no speech model set up., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
 
+  /api/v1/lessons/{id}/slides:
+    get:
+      tags: [3. Captions and descriptions]
+      summary: The lesson's slides and picture descriptions
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '200': { description: Slides (empty if none yet), content: { application/json: { schema: { type: object, properties: { slides: { type: array, items: { $ref: '#/components/schemas/Slide' } } } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [3. Captions and descriptions]
+      summary: Set the slides and describe each picture
+      description: |
+        For each slide: the second it appears, a short title, and a real description of the picture (what someone who cannot see it needs to know).
+        The lesson document (web page and PDF) then has one section per slide with the picture described. Replaces all slides.
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [slides], properties: { slides: { type: array, items: { $ref: '#/components/schemas/Slide' } } } }
+            example:
+              slides:
+                - time: 0.5
+                  en: { title: Introduction, alt: 'Title slide: the words "How to write a CV" in white on dark blue.' }
+                  am: { title: መግቢያ, alt: 'የርዕስ ስላይድ፦ "How to write a CV" የሚሉ ቃላት በነጭ ፊደል።' }
+                - time: 5
+                  en: { title: 'What is a CV?', alt: A sheet of paper with a name at the top and three short sections below. }
+      responses:
+        '200': { description: Saved, content: { application/json: { example: { slides: [{ time: 0.5, en: { title: Introduction, alt: '…' } }], document: https://THIS-SERVER/api/v1/lessons/demo/document } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- 4. Sign language
+  /api/v1/lessons/{id}/sign:
+    post:
+      tags: [4. Sign language]
+      summary: Add the sign language video
+      description: |
+        A recording of an interpreter signing the lesson. **Easiest:** the [sign language studio](/studio/sign.html) records it in the browser while the lesson plays, so it starts in time.
+        From a file: if the signing starts later than the lesson, give `offset` (seconds to cut from the start; negative = signing started early).
+        The video is made small for phones and **its sound is removed** (the interpreter's voice stays private). The previous recording is kept on the server.
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video: { type: string, format: binary, description: The interpreter recording (any common video format). }
+                offset: { type: number, minimum: -10, maximum: 10, default: 0, description: 'Seconds. Positive: cut this much from the start.' }
+      responses:
+        '201': { description: Saved, content: { application/json: { example: { ok: true, sign: { src: lesson.ethsl.mp4, lang: sgn-et, label: Ethiopian Sign Language, recordedAt: '2026-11-16T08:00:00.000Z', offset: 0.4 } } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/sign-requests:
+    get:
+      tags: [4. Sign language]
+      summary: Which lessons learners want signed, most wanted first
+      description: When a learner presses "Sign language" on a lesson without it, it is counted here (no names). Record these first.
+      responses:
+        '200': { description: Requests, content: { application/json: { example: { requests: [{ id: how-to-write-a-cv, title: How to write a CV, count: 12, lastRequested: '2026-11-16T09:12:00.000Z', hasSign: false }] } } } }
+
+  /api/v1/lessons/{id}/sign-requests:
+    post:
+      tags: [4. Sign language]
+      summary: Ask for sign language on a lesson (the player does this)
+      description: Anonymous. The player calls it when a learner wants sign language that is not there yet. You do not need to call it.
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '201': { description: Counted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- 5. Jobs and certificates
   /api/v1/jobs:
     get:
-      tags: [Jobs]
-      summary: Jobs (test data), each with schema.org JobPosting
+      tags: [5. Jobs and certificates]
+      summary: All jobs (public)
+      parameters:
+        - { name: provider, in: query, description: 'Only one provider''s jobs: your id is in GET /api/v1/me.', schema: { type: string } }
       responses:
         '200': { description: Jobs, content: { application/json: { schema: { type: object, properties: { jobs: { type: array, items: { $ref: '#/components/schemas/Job' } } } } } } }
+    post:
+      tags: [5. Jobs and certificates]
+      summary: Add a job
+      description: |
+        Write the summary in plain language: learners can have it read aloud. Add Amharic in `am`.
+        The answer has the `card` code for your page and `jsonLd` for job search engines.
+      security: [{ apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Job' }
+            example:
+              employer: Debo Learning
+              city: Addis Ababa
+              remote: true
+              employmentType: PART_TIME
+              validThrough: '2026-12-31'
+              apply: mailto:jobs@example.com
+              support: [interpreter, remote, flexible-hours]
+              en: { title: Customer Service Assistant, summary: Answer customer questions by chat and email. Training is given. You can work from home. }
+              am: { title: የደንበኞች አገልግሎት ረዳት, summary: የደንበኞችን ጥያቄዎች በቻት እና በኢሜይል ይመልሳሉ። ስልጠና ይሰጣል። ከቤት መሥራት ይችላሉ። }
+      responses:
+        '201': { description: Added, content: { application/json: { example: { id: customer-service-assistant, card: "<script type=\"module\" src=\"https://THIS-SERVER/module/db-job-card.js\"></script>\n<db-job-card job=\"customer-service-assistant\"></db-job-card>" } } } }
+        '400': { description: Something is missing or wrong. `problems` lists everything., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+
   /api/v1/jobs/{id}:
     get:
-      tags: [Jobs]
+      tags: [5. Jobs and certificates]
       summary: One job
-      parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: junior-frontend }]
+      parameters: [{ $ref: '#/components/parameters/jobId' }]
       responses:
         '200': { description: The job, content: { application/json: { schema: { $ref: '#/components/schemas/Job' } } } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [5. Jobs and certificates]
+      summary: Change a job
+      description: Send only what changes.
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/jobId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Job' }
+            example: { validThrough: '2027-01-15' }
+      responses:
+        '200': { description: Changed, content: { application/json: { schema: { $ref: '#/components/schemas/Job' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [5. Jobs and certificates]
+      summary: Remove a job
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/jobId' }]
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/certificates:
     post:
-      tags: [Certificates]
-      summary: Issue an Open Badges 3.0 certificate (signed VC-JWT, EdDSA)
-      security: [{ staff: [] }]
+      tags: [5. Jobs and certificates]
+      summary: Give a learner a certificate
+      description: |
+        When a learner finishes a course. The answer's `page` is a link the learner sends to employers:
+        it shows "✓ Verified" (in English or Amharic) and needs no account. It is an Open Badges 3.0 credential, signed by this server,
+        naming your organisation as the issuer. Only the learner's name and what they achieved are stored.
+      security: [{ apiKey: [] }]
       requestBody:
         required: true
         content:
@@ -355,42 +727,63 @@ paths:
                 achievement:
                   type: object
                   required: [name]
-                  properties: { id: { type: string }, name: { type: string }, description: { type: string }, criteria: { type: string } }
+                  properties:
+                    id: { type: string, description: Your course id. }
+                    name: { type: string }
+                    description: { type: string }
+                    criteria: { type: string, description: What the learner did to earn it. }
+            example: { learnerName: Abebe Kebede, achievement: { id: first-job, name: Getting your first job, description: 'Five short lessons on CVs, job search and interviews.', criteria: Watched all five lessons. } }
       responses:
-        '201': { description: 'Issued: { id, page, credential, jwt }' }
+        '201': { description: Given, content: { application/json: { example: { id: Xk3p9QaB2c, page: https://THIS-SERVER/certificates/Xk3p9QaB2c, credential: { type: [VerifiableCredential, OpenBadgeCredential] }, jwt: eyJhbGciOiJFZERTQSI… } } } }
         '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+
   /api/v1/certificates/{id}:
     get:
-      tags: [Certificates]
-      summary: A certificate and whether its signature is valid
+      tags: [5. Jobs and certificates]
+      summary: Check a certificate (for software)
+      description: '`valid` is true when the signature is good and nothing was changed. People should use the page: `/certificates/{id}`.'
       parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: demo-learner }]
       responses:
-        '200': { description: '{ valid, credential, jwt }' }
-        '404': { $ref: '#/components/responses/Error' }
+        '200': { description: The certificate, content: { application/json: { example: { valid: true, credential: {}, jwt: eyJhbGciOiJFZERTQSI… } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /certificates/{id}:
     get:
-      tags: [Certificates]
-      summary: The page an employer opens ("Verified" or "Not valid"); ?lang=am for Amharic
+      tags: [5. Jobs and certificates]
+      summary: The page an employer opens
+      description: Says "✓ Verified" or "✗ Not valid", who it is for, what for, who gave it and when (in both calendars). Add `?lang=am` for Amharic.
       parameters: [{ name: id, in: path, required: true, schema: { type: string }, example: demo-learner }]
       responses:
-        '200': { description: HTML page, content: { text/html: {} } }
+        '200': { description: A web page, content: { text/html: {} } }
+
   /.well-known/jwks.json:
     get:
-      tags: [Certificates]
-      summary: The issuer's public key, to check certificates without asking us
+      tags: [5. Jobs and certificates]
+      summary: This server's public key (to check certificates offline)
       responses:
         '200': { description: JWK set }
 
+  # ---------------------------------------------------------------- 6. Connect your systems
   /api/v1/webhooks:
     post:
-      tags: [Webhooks]
-      summary: Register an address to be told when something happens
+      tags: [6. Connect your systems]
+      summary: Tell your server when something happens
       description: |
-        We POST `{ event, time, data }` with headers `X-DB-Event` and `X-DB-Signature: sha256=<HMAC-SHA256 of the body with your secret>`.
-        Events: lesson.ready, sign.recorded, sign.requested, captions.updated, certificate.issued. No learner names are sent.
-        The secret is returned once, when you register.
-      security: [{ staff: [] }]
+        Give an address on your server. We send it a `POST` with `{ "event", "time", "data" }` when one of these happens to **your** lessons or certificates:
+
+        | Event | When |
+        |---|---|
+        | `lesson.ready` | An added lesson is ready (data: `lesson`, `captions`) |
+        | `captions.updated` | Captions or descriptions were saved (`lesson`, `kind`, `lang`, `lines`, `reviewed`) |
+        | `sign.recorded` | A sign language video was added (`lesson`) |
+        | `sign.requested` | A learner asked for sign language (`lesson`) |
+        | `certificate.issued` | You gave a certificate (`id`, `page`, `achievement`) |
+
+        **Keep the `secret` from the answer: it is shown only once.** Each call has a header
+        `X-DB-Signature: sha256=<HMAC-SHA256 of the body, with your secret>`. Check it to know the call came from us.
+        No learner names are ever sent. One try, 5-second timeout.
+      security: [{ apiKey: [] }]
       requestBody:
         required: true
         content:
@@ -399,23 +792,29 @@ paths:
               type: object
               required: [url]
               properties:
-                url: { type: string, format: uri }
-                events: { type: array, items: { type: string, enum: [lesson.ready, sign.recorded, sign.requested, captions.updated, certificate.issued] } }
+                url: { type: string, format: uri, description: Your address (https://). }
+                events: { type: array, description: Leave out for all events., items: { type: string, enum: [lesson.ready, captions.updated, sign.recorded, sign.requested, certificate.issued] } }
+            example: { url: 'https://debo.example/hooks/learning', events: [lesson.ready, captions.updated] }
       responses:
-        '201': { description: 'Registered: { id, url, events, secret, createdAt }' }
+        '201': { description: Registered, content: { application/json: { example: { id: q8Zr1T, url: 'https://debo.example/hooks/learning', events: [lesson.ready, captions.updated], secret: Hk2…keep-this…9s, createdAt: '2026-11-16T08:00:00.000Z', note: 'Keep the secret: it is shown only once.' } } } }
         '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
     get:
-      tags: [Webhooks]
-      summary: List webhooks (without secrets)
-      security: [{ staff: [] }]
+      tags: [6. Connect your systems]
+      summary: Your webhooks
+      security: [{ apiKey: [] }]
       responses:
-        '200': { description: Webhooks }
+        '200': { description: Your webhooks (without secrets) and the events you can choose, content: { application/json: { example: { webhooks: [{ id: q8Zr1T, url: 'https://debo.example/hooks/learning', events: [lesson.ready] }], events: [lesson.ready, sign.recorded, sign.requested, captions.updated, certificate.issued] } } } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+
   /api/v1/webhooks/{id}:
     delete:
-      tags: [Webhooks]
-      summary: Remove a webhook
-      security: [{ staff: [] }]
+      tags: [6. Connect your systems]
+      summary: Stop a webhook
+      security: [{ apiKey: [] }]
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
-        '204': { description: Removed }
-        '404': { $ref: '#/components/responses/Error' }
+        '204': { description: Stopped }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '404': { $ref: '#/components/responses/NotFound' }

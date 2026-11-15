@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation — Digital Bridge learning media API</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/docs/assets/swagger-ui.css">
+<style>
+  /* Swagger UI, made calmer and easier to read. */
+  .swagger-ui { font-family: inherit; }
+  .swagger-ui .topbar { display: none; }
+  .swagger-ui .info { margin: 1rem 0; }
+  .swagger-ui .info .title { font-size: clamp(1.5rem, 4vw, 2.1rem); }
+  .swagger-ui .info .markdown p, .swagger-ui .info .markdown li, .swagger-ui .opblock-description-wrapper p,
+  .swagger-ui .opblock-tag small p, .swagger-ui .markdown p, .swagger-ui .markdown li { font-size: 1rem; line-height: 1.6; }
+  .swagger-ui .info .markdown pre, .swagger-ui .opblock-description-wrapper pre, .swagger-ui .markdown pre { background: #1d2430; color: #f1f4f8; padding: 0.75rem 1rem; border-radius: 8px; white-space: pre-wrap; }
+  .swagger-ui .info .markdown code, .swagger-ui .markdown code { font-size: 0.92em; }
+  .swagger-ui .opblock-tag { font-size: 1.35rem; border-bottom: 2px solid #8a90a0; }
+  .swagger-ui .opblock .opblock-summary-description { font-size: 0.98rem; color: #16181d; }
+  .swagger-ui .opblock .opblock-summary-path { font-size: 0.95rem; }
+  .swagger-ui .btn { min-height: 40px; }
+  .swagger-ui .scheme-container { box-shadow: none; padding: 0.5rem 0; background: transparent; }
+  .swagger-ui .wrapper { padding: 0; max-width: none; }
+  .swagger-ui .filter-container .operation-filter-input { min-height: 44px; font-size: 1rem; }
+  #api { max-width: 64rem; margin: 0 auto; padding: 0 1rem 3rem; }
+  .keybar { max-width: 64rem; margin: 1rem auto 0; padding: 0 1rem; }
+  .keybar .status { margin: 0; }
+  /* Swagger's own colours are light-only: keep its area light so text stays readable. */
+  #api { background: #fff; color: #16181d; color-scheme: light; border-radius: 10px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#api">Skip to the documentation</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/docs" aria-current="page">Documentation</a></li>
+        <li><a href="/debo/">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<div class="keybar">
+  <p id="keystatus" class="status" role="status"></p>
+</div>
+<main id="api" tabindex="-1"></main>
+<script src="/docs/assets/swagger-ui-bundle.js"></script>
+<script>
+  let key = null;
+  try { key = sessionStorage.getItem('studio-code'); } catch {}
+  const status = document.getElementById('keystatus');
+  async function showKey() {
+    if (!key) {
+      status.innerHTML = 'To try calls that change things, <a href="/get-key">get your key</a> (it takes ten seconds), then come back. Reading calls work without a key.';
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/me', { headers: { Authorization: `Bearer ${key}` } });
+      if (!res.ok) throw new Error();
+      const me = await res.json();
+      status.className = 'status ok';
+      status.textContent = `Using the key for ${me.admin ? 'the host (master key)' : me.provider.name}: “Try it out” sends it for you.`;
+    } catch {
+      status.innerHTML = 'The key remembered in this tab no longer works. <a href="/get-key">Get a new key</a>.';
+      key = null;
+    }
+  }
+  showKey().then(() => {
+    window.ui = SwaggerUIBundle({
+      url: '/openapi.yaml',
+      dom_id: '#api',
+      deepLinking: true,
+      tryItOutEnabled: true,          // every call can be tried at once
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      requestSnippetsEnabled: true,   // a ready-made curl command for each call
+      filter: true,                   // a search box for calls
+      docExpansion: 'list',
+      defaultModelsExpandDepth: -1,   // hide the schema list at the bottom: each call shows its own example
+      defaultModelExpandDepth: 3,
+      onComplete: () => { if (key) window.ui.preauthorizeApiKey('apiKey', key); },
+    });
+  });
+</script>
+</body>
+</html>

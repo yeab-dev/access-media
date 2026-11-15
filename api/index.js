@@ -1,6 +1,7 @@
 import express from 'express';
 import compression from 'compression';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, cp, writeFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureOfflinePack } from './offline.js';
@@ -8,10 +9,12 @@ import { parseVtt, renderTranscriptHtml, formatClock } from './vtt.js';
 import { signRouter, adminToken } from './sign.js';
 import { jobsRouter } from './jobs.js';
 import { certificatesRouter } from './certificates.js';
-import { captionsRouter } from './captions.js';
+import { captionsRouter, warmUpSpeechModel } from './captions.js';
 import { documentsRouter } from './documents.js';
 import { webhooksRouter } from './webhooks.js';
 import { lessonsRouter } from './lessons.js';
+import { configureAuth, keysRouter } from './auth.js';
+import { publicOrigin, embedCode } from './origin.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -21,7 +24,9 @@ const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 'loopback'); // correct https URLs behind a local tunnel (cloudflared, ngrok)
+// Correct https URLs and client addresses behind a proxy: a local tunnel (loopback) or a host's load balancer
+// (TRUST_PROXY=1 on Render: one proxy in front of us).
+app.set('trust proxy', process.env.TRUST_PROXY ? (Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY) : 'loopback');
 // Compress text (JS, JSON, HTML, VTT): the player is ~62 KB raw, ~18 KB compressed. Media is already compressed.
 app.use(compression());
 
@@ -41,19 +46,24 @@ app.use('/media', cors, express.static(LESSONS_DIR, { ...revalidate, fallthrough
 app.use('/demo', express.static(path.join(ROOT, 'demo'), revalidate));
 app.use('/savanna', express.static(path.join(ROOT, 'savanna'), revalidate));
 app.use('/studio', express.static(path.join(ROOT, 'studio'), revalidate));
-app.get('/', (_req, res) => res.redirect('/demo/'));
+// Pages for lesson providers: what this is, get a key, the documentation.
+const portal = (file) => (_req, res) => res.set('Cache-Control', 'no-cache').sendFile(path.join(ROOT, 'portal', file));
+app.get('/', portal('index.html'));
+app.get('/get-key', portal('get-key.html'));
+app.use('/portal', express.static(path.join(ROOT, 'portal'), revalidate));
+// The example lesson provider's website (made-up company), embedding the player like any outside site would.
+app.use('/debo', express.static(path.join(ROOT, 'provider-site'), revalidate));
 
 // Level 2 documentation: the OpenAPI file, and Swagger UI at /docs so a judge can try calls in the browser.
-app.get('/openapi.yaml', (_req, res) => res.type('application/yaml').sendFile(path.join(ROOT, 'openapi.yaml')));
+// The examples say https://THIS-SERVER: fill in this server's real address, so copied code works as it is.
+app.get('/openapi.yaml', async (req, res, next) => {
+  try {
+    const text = await readFile(path.join(ROOT, 'openapi.yaml'), 'utf8');
+    res.type('application/yaml').set('Cache-Control', 'no-cache').send(text.replaceAll('https://THIS-SERVER', publicOrigin(req)));
+  } catch (err) { next(err); }
+});
 app.use('/docs/assets', express.static(path.dirname(fileURLToPath(import.meta.resolve('swagger-ui-dist/package.json')))));
-app.get('/docs', (_req, res) => res.type('html').send(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>API documentation — Digital Bridge learning media</title>
-<link rel="stylesheet" href="/docs/assets/swagger-ui.css"></head>
-<body><main id="api"></main>
-<script src="/docs/assets/swagger-ui-bundle.js"></script>
-<script>SwaggerUIBundle({ url: '/openapi.yaml', dom_id: '#api', deepLinking: true });</script>
-</body></html>`));
+app.get('/docs', portal('docs.html'));
 
 // ---------- API v1 ----------
 const api = express.Router();
@@ -161,16 +171,42 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
   }
 });
 
+configureAuth({ dataDir: DATA_DIR });
+api.use(keysRouter({ onNewProvider: practiceLesson }));
 api.use(lessonsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
 api.use(captionsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(documentsRouter({ lessonsDir: LESSONS_DIR }));
-api.use(webhooksRouter({ dataDir: DATA_DIR }));
-api.use(jobsRouter({ jobsFile: path.resolve(process.env.JOBS_FILE || path.join(ROOT, 'demo', 'data', 'jobs.json')) }));
+api.use(webhooksRouter({ dataDir: DATA_DIR, lessonsDir: LESSONS_DIR }));
+api.use(jobsRouter({ jobsFile: path.resolve(process.env.JOBS_FILE || path.join(ROOT, 'demo', 'data', 'jobs.json')), dataDir: DATA_DIR }));
 const certificates = certificatesRouter({ dataDir: DATA_DIR, publicUrl: process.env.PUBLIC_URL });
 api.use(certificates.api);
 app.use('/api/v1', api);
 app.use(certificates.pages);
+
+/**
+ * Every new key comes with a practice lesson of its own: a copy of the demo lesson that the provider owns,
+ * so they can try captions, audio description, sign language and slides at once, before uploading anything.
+ */
+async function practiceLesson(provider, req) {
+  const id = `practice-${randomBytes(3).toString('hex')}`;
+  const from = path.join(LESSONS_DIR, 'demo');
+  const to = path.join(LESSONS_DIR, id);
+  // Generated files (documents, offline pack) and old versions are rebuilt or not needed.
+  await cp(from, to, { recursive: true, filter: (src) => !/(^|\/)(document|offline\.zip)$|\.previous/.test(path.relative(from, src)) });
+  const m = JSON.parse(await readFile(path.join(to, 'manifest.json'), 'utf8'));
+  Object.assign(m, { id, title: `Practice lesson: ${m.title}`, owner: provider.id, practice: true, createdAt: new Date().toISOString() });
+  if (m.titles?.am) m.titles = { ...m.titles, am: `የልምምድ ትምህርት፦ ${m.titles.am}` };
+  await writeFile(path.join(to, 'manifest.json'), JSON.stringify(m, null, 2));
+  return {
+    practiceLesson: { id, title: m.title, href: `${publicOrigin(req)}/api/v1/lessons/${id}`, embed: embedCode(req, id) },
+    next: {
+      docs: `${publicOrigin(req)}/docs`,
+      addLesson: `${publicOrigin(req)}/studio/lessons.html`,
+      captions: `${publicOrigin(req)}/studio/captions.html?lesson=${id}`,
+    },
+  };
+}
 
 /** A test certificate so the jobs page has something to share. Fixed id: demo-learner. */
 export async function ensureDemoCertificate(port = PORT) {
@@ -193,5 +229,6 @@ app.use((err, req, res, _next) => {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   adminToken();
   await ensureDemoCertificate();
+  warmUpSpeechModel(); // in the background: download the speech model if the speech server does not have it yet
   app.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
 }

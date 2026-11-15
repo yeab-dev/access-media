@@ -45,8 +45,9 @@
   <p class="lead">Upload a lesson video. The server makes it small enough for 3G phones and, when a speech model is set up, writes captions in the language spoken in the video. Then put one tag on your page.</p>
 
   <form id="form" novalidate>
-    <label for="code">Staff access code</label>
-    <input id="code" type="password" autocomplete="current-password" required>
+    <label for="code">Your API key</label>
+    <input id="code" type="password" autocomplete="current-password" required aria-describedby="code-hint">
+    <p class="hint" id="code-hint">No key yet? <a href="/get-key">Get your key</a> (ten seconds).</p>
 
     <label for="title">Lesson title</label>
     <input id="title" type="text" required maxlength="200" aria-describedby="title-hint" autocomplete="off">
@@ -106,7 +107,7 @@ $('code').addEventListener('change', () => { try { sessionStorage.setItem('studi
 
 // Problems are said in words and focus goes to the first field that needs fixing.
 function check() {
-  for (const [id, text] of [['code', 'Enter the staff access code.'], ['title', 'Give the lesson a title.'], ['video', 'Choose the video file.']]) {
+  for (const [id, text] of [['code', 'Enter your API key.'], ['title', 'Give the lesson a title.'], ['video', 'Choose the video file.']]) {
     const el = $(id);
     const empty = id === 'video' ? !el.files.length : !el.value.trim();
     el.setAttribute('aria-invalid', String(empty));
