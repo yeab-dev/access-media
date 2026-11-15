@@ -140,8 +140,10 @@ export function lessonsRouter({ lessonsDir }) {
         events.emit('captions.updated', { lesson: id, kind: 'captions', lang, lines, reviewed: false });
         events.emit('lesson.ready', { lesson: id, captions: [lang] });
       } catch (err) {
-        console.error(`lessons: automatic captions failed for ${id}`, err);
-        await update(id, { status: 'ready', statusMessage: `The lesson is ready, but automatic captions failed: ${err.message} Add captions in the caption editor.` });
+        console.error(`lessons: automatic captions failed for ${id}`, err.cause?.code || err.message);
+        const unreachable = err.name === 'TimeoutError' || /fetch failed/i.test(err.message);
+        const why = unreachable ? 'the speech model on this server could not be reached.' : err.message;
+        await update(id, { status: 'ready', statusMessage: `The lesson is ready, but there are no automatic captions: ${why} Add captions in the caption editor.` });
         events.emit('lesson.ready', { lesson: id, captions: [] });
       }
     } catch (err) {
