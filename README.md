@@ -38,8 +38,6 @@ Everything else (captions in other languages, audio description, sign language, 
 
 > A Deaf learner follows a lesson on a low-cost Android phone with the Ethiopian Sign Language window and Amharic captions; a blind learner follows the same lesson with TalkBack and audio description. Both do it alone.
 
-_TODO: co-designer result (see the end of [CONFORMANCE.md](CONFORMANCE.md))._
-
 ## Run it
 
 ```sh

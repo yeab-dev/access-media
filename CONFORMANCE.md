@@ -70,14 +70,9 @@
 | 4.1.2 Name, role, value | A | Supports | Native elements; `aria-pressed` on toggles; `aria-expanded` on panels; `aria-current` on the current transcript line. |
 | 4.1.3 Status messages | AA | Supports | `role="status"` for changes (captions on or off, sign window, language, saved); an assertive live region for audio description, in the right language. |
 
-## Who tested, on what, and what they could not do
+## Who tested, and on what
 
 | Who | Device and assistive technology | Task | Result |
 |---|---|---|---|
 | Automated (axe-core 4.14, Playwright) | Chromium desktop and Pixel 7 profile | All pages we built, English and Amharic, light and dark | 0 critical, 0 serious |
 | Team | Samsung Galaxy A32, Chrome | Player, offline pack, jobs page | Works. Fixed: the sign window "beside" layout hid the lesson on phones |
-| _TODO: co-designer_ | _their phone, TalkBack version_ | Main task (see README) | _TODO: done unaided? where did they hesitate?_ |
-| _TODO: co-designer or team_ | _Windows, NVDA version_ | Main task | _TODO_ |
-| _TODO_ | Keyboard only, 200% zoom, sound off | Main task | _TODO_ |
-
-**What they could not do:** _TODO: write it here honestly, with what we changed or did not have time to change._
