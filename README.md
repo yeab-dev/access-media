@@ -2,7 +2,7 @@
 
 Digital Bridge Accessibility Hackathon 2026 · Track 2, accessible learning media
 
-**Team:** _TODO: names_ · **Co-designer:** _TODO: name (with their permission)_
+**Team:** AccessibleBuilders
 
 ## What it does
 
