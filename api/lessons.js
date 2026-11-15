@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { requireKey, mayChange, notYours, ownerOf, limits } from './auth.js';
 import { publicOrigin, embedCode } from './origin.js';
-import { transcribe } from './captions.js';
+import { transcribe, speechMode } from './speech.js';
 import { parseVtt } from './vtt.js';
 import { events } from './events.js';
 
@@ -106,7 +106,7 @@ export function lessonsRouter({ lessonsDir }) {
       await ffmpeg(['-ss', String(Math.min(1, info.duration / 2)), '-i', path.join(dir, 'lesson.mp4'), '-frames:v', '1', '-q:v', '5', path.join(dir, 'poster.jpg')]);
       await rm(original, { force: true });
 
-      const asr = !!process.env.ASR_URL;
+      const asr = !!speechMode(); // 'loading' too: the transcription then says so in the lesson's status
       await update(id, {
         duration: Math.round(info.duration),
         poster: 'poster.jpg',

@@ -1,5 +1,6 @@
 # One command: docker compose up   →   http://localhost:8080
-# Settings come from .env (copy .env.example). ADMIN_TOKEN is the staff access code.
+# Settings come from .env (copy .env.example). ADMIN_TOKEN is the host's master key.
+# Automatic captions are built in (whisper.cpp in the "web" image); the speech model downloads on first start.
 services:
   web:
     build: .
@@ -14,9 +15,21 @@ services:
       - lessons:/data
     restart: unless-stopped
 
-  # Optional: a local open speech model for caption drafts (nothing leaves the machine).
-  #   docker compose --profile asr up
-  # then set ASR_URL=http://asr:8000 in .env. The first draft downloads the model (a few hundred MB).
+  # On a public server: free HTTPS (Let's Encrypt) in front of the app.
+  #   DOMAIN=<your-ip-with-dashes>.sslip.io docker compose --profile https up -d
+  # (sslip.io turns 1-2-3-4.sslip.io into 1.2.3.4, so no domain needs buying.) Also set TRUST_PROXY=1 in .env.
+  https:
+    profiles: ["https"]
+    image: caddy:2.8.4
+    ports: ["80:80", "443:443"]
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to web:8080
+    volumes:
+      - caddy-data:/data
+    depends_on: [web]
+    restart: unless-stopped
+
+  # Optional, instead of the built-in speech model: a separate faster-whisper server.
+  #   docker compose --profile asr up, then set ASR_URL=http://asr:8000 in .env.
   asr:
     profiles: ["asr"]
     image: ghcr.io/speaches-ai/speaches:latest-cpu
@@ -32,4 +45,5 @@ services:
 
 volumes:
   lessons:
+  caddy-data:
   asr-models:

@@ -10,6 +10,7 @@ await cp(new URL('../../data/lessons/demo', import.meta.url).pathname, path.join
 process.env.DATA_DIR = dir;
 process.env.ADMIN_TOKEN = 'unit-test-master';
 delete process.env.ASR_URL;
+process.env.WHISPER_MODEL = 'off'; // these tests are about the remote speech server or none; whisper.cpp has its own tests
 const { app } = await import('../../api/index.js');
 
 let server; let base; let hookServer; const received = [];
