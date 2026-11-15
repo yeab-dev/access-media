@@ -148,7 +148,9 @@ export function captionsRouter({ lessonsDir }) {
       const { vtt, model } = await transcribe(path.join(dirOf(id), src.src), lang);
       res.json({ lang, vtt, model, lines: parseVtt(vtt).length, note: 'Draft: a person must check every line and time before saving.' });
     } catch (err) {
-      if (err.name === 'TimeoutError' || err.cause?.code === 'ECONNREFUSED') {
+      // Any failure to reach it: refused, unknown host name (no such service), timeout.
+      if (err.name === 'TimeoutError' || (err.name === 'TypeError' && /fetch failed/i.test(err.message)) || ['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'UND_ERR_CONNECT_TIMEOUT'].includes(err.cause?.code)) {
+        console.error(`captions: speech model at ${asrUrl()} unreachable:`, err.cause?.code || err.message);
         return bad(res, 'speech_model_unreachable', 'The speech model could not be reached. Check that it is running.', 502);
       }
       if (err.code === 'speech_model_error') return bad(res, 'speech_model_error', err.message, 502);
