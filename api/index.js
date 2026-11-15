@@ -11,6 +11,7 @@ import { certificatesRouter } from './certificates.js';
 import { captionsRouter } from './captions.js';
 import { documentsRouter } from './documents.js';
 import { webhooksRouter } from './webhooks.js';
+import { lessonsRouter } from './lessons.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -98,7 +99,7 @@ api.get('/lessons', async (req, res) => {
   for (const id of ids) {
     try {
       const m = await readManifest(id);
-      lessons.push({ id: m.id, title: m.title, lang: m.lang, duration: m.duration, href: `${origin(req)}/api/v1/lessons/${id}` });
+      lessons.push({ id: m.id, title: m.title, lang: m.lang, duration: m.duration, status: m.status || 'ready', href: `${origin(req)}/api/v1/lessons/${id}` });
     } catch { /* not a lesson folder */ }
   }
   res.json({ lessons });
@@ -160,6 +161,7 @@ api.get('/lessons/:id/offline-pack', async (req, res, next) => {
   }
 });
 
+api.use(lessonsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(signRouter({ lessonsDir: LESSONS_DIR, dataDir: DATA_DIR }));
 api.use(captionsRouter({ lessonsDir: LESSONS_DIR }));
 api.use(documentsRouter({ lessonsDir: LESSONS_DIR }));

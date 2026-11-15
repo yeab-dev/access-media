@@ -42,6 +42,34 @@ function ffmpeg(args) {
   });
 }
 
+/**
+ * Captions from the speech model for one media file. Throws with code 'no_speech_model' if ASR_URL is not set,
+ * 'speech_model_error' if the model answers with an error. Used for editor drafts and for new uploads.
+ */
+export async function transcribe(mediaFile, lang) {
+  const asr = process.env.ASR_URL;
+  if (!asr) throw Object.assign(new Error('No speech model is set up (ASR_URL).'), { code: 'no_speech_model' });
+  const model = process.env.ASR_MODEL || 'Systran/faster-whisper-small';
+  const work = await mkdtemp(path.join(tmpdir(), 'db-asr-'));
+  try {
+    const audio = path.join(work, 'audio.mp3');
+    // 16 kHz mono is what speech models expect, and keeps the upload small.
+    await ffmpeg(['-i', mediaFile, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '32k', audio]);
+    const form = new FormData();
+    form.append('file', new Blob([await readFile(audio)], { type: 'audio/mpeg' }), 'audio.mp3');
+    form.append('model', model);
+    form.append('language', lang);
+    form.append('response_format', 'vtt');
+    const r = await fetch(`${asr.replace(/\/$/, '')}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(10 * 60_000) });
+    if (!r.ok) throw Object.assign(new Error(`The speech model answered with an error (${r.status}).`), { code: 'speech_model_error' });
+    let vtt = await r.text();
+    if (!isValidVtt(vtt)) vtt = `WEBVTT\n\n${vtt}`;
+    return { vtt: vtt.replace(/\r\n?/g, '\n'), model };
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+}
+
 export function captionsRouter({ lessonsDir }) {
   const router = express.Router();
   const dirOf = (id) => path.join(lessonsDir, id);
@@ -69,7 +97,7 @@ export function captionsRouter({ lessonsDir }) {
 
     const tracks = manifest.tracks || [];
     const existing = tracks.find((t) => t.kind === kind && t.srclang === lang);
-    const meta = { reviewed: source === 'person', updatedAt: new Date().toISOString() };
+    const meta = { reviewed: source === 'person', auto: source !== 'person', updatedAt: new Date().toISOString() };
     if (existing) Object.assign(existing, { src: file, ...meta });
     else tracks.push({ kind, srclang: lang, label: languageName(lang), src: file, ...meta });
     manifest.tracks = tracks;
@@ -86,36 +114,22 @@ export function captionsRouter({ lessonsDir }) {
     if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
     const lang = String(req.body?.lang || 'en');
     if (!LANG.test(lang)) return bad(res, 'invalid_lang', 'Give the language as a code, for example "am" or "en".');
-    const asr = process.env.ASR_URL;
-    if (!asr) {
+    if (!process.env.ASR_URL) {
       return bad(res, 'no_speech_model',
         'No speech model is set up on this server, so there is no automatic draft. Start from the existing captions or an empty file. (Hosts: set ASR_URL to a local faster-whisper server.)', 503);
     }
     let manifest;
     try { manifest = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
     const src = (manifest.sources || []).find((s) => s.quality === 'audio') || manifest.sources?.[0];
-    const work = await mkdtemp(path.join(tmpdir(), 'db-asr-'));
     try {
-      const audio = path.join(work, 'audio.mp3');
-      // 16 kHz mono is what speech models expect, and keeps the upload small.
-      await ffmpeg(['-i', path.join(dirOf(id), src.src), '-vn', '-ac', '1', '-ar', '16000', '-b:a', '32k', audio]);
-      const form = new FormData();
-      form.append('file', new Blob([await readFile(audio)], { type: 'audio/mpeg' }), 'audio.mp3');
-      form.append('model', process.env.ASR_MODEL || 'Systran/faster-whisper-small');
-      form.append('language', lang);
-      form.append('response_format', 'vtt');
-      const r = await fetch(`${asr.replace(/\/$/, '')}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(10 * 60_000) });
-      if (!r.ok) return bad(res, 'speech_model_error', `The speech model answered with an error (${r.status}).`, 502);
-      let vtt = await r.text();
-      if (!isValidVtt(vtt)) vtt = `WEBVTT\n\n${vtt}`;
-      res.json({ lang, vtt, model: process.env.ASR_MODEL || 'Systran/faster-whisper-small', lines: parseVtt(vtt).length, note: 'Draft: a person must check every line and time before saving.' });
+      const { vtt, model } = await transcribe(path.join(dirOf(id), src.src), lang);
+      res.json({ lang, vtt, model, lines: parseVtt(vtt).length, note: 'Draft: a person must check every line and time before saving.' });
     } catch (err) {
       if (err.name === 'TimeoutError' || err.cause?.code === 'ECONNREFUSED') {
         return bad(res, 'speech_model_unreachable', 'The speech model could not be reached. Check that it is running.', 502);
       }
+      if (err.code === 'speech_model_error') return bad(res, 'speech_model_error', err.message, 502);
       next(err);
-    } finally {
-      await rm(work, { recursive: true, force: true });
     }
   });
 

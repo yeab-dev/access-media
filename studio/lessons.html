@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add a lesson — upload a video, get captions</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #16181d; --muted: #4a5060; --line: #8a90a0; --accent: #0b5cad; --panel: #f3f5f8; --ok: #146c2e; --bad: #b00020; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0f1115; --fg: #eef0f4; --muted: #b8bfcc; --line: #7c8496; --accent: #8cc4ff; --panel: #1f232b; --ok: #7fd48f; --bad: #ff8a80; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, "Noto Sans", "Noto Sans Ethiopic", sans-serif; line-height: 1.5; }
+  main { max-width: 48rem; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.6rem; margin: 0.5rem 0; }
+  h2 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; }
+  p.lead, .hint { color: var(--muted); }
+  p.lead { margin-top: 0; }
+  label { display: block; font-weight: 600; margin: 1rem 0 0.25rem; }
+  .hint { margin: 0.25rem 0 0; font-size: 0.95rem; }
+  input, select, button { font: inherit; color: inherit; }
+  input[type=password], input[type=text], select { min-height: 44px; padding: 0 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); width: 100%; max-width: 32rem; }
+  input[type=file] { min-height: 44px; max-width: 100%; }
+  input[type=file]::file-selector-button { min-height: 44px; padding: 0 1rem; margin-inline-end: 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font: inherit; color: inherit; cursor: pointer; }
+  button { min-height: 44px; padding: 0 1.1rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); cursor: pointer; margin: 1.25rem 0.5rem 0 0; }
+  button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .status { padding: 0.5rem 0.75rem; border-inline-start: 4px solid var(--accent); background: var(--panel); }
+  .status:empty { display: none; }
+  .status.ok { border-color: var(--ok); }
+  .status.bad { border-color: var(--bad); }
+  progress { width: 100%; max-width: 32rem; height: 1rem; accent-color: var(--accent); }
+  ol.steps { padding-inline-start: 1.25rem; }
+  ol.steps li { margin-block: 0.25rem; }
+  ol.steps .done::after { content: " ✓"; color: var(--ok); font-weight: 700; }
+  pre { background: var(--panel); padding: 0.75rem; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  a { color: var(--accent); }
+  .links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; padding: 0; list-style: none; }
+  .links a { display: inline-flex; align-items: center; min-height: 44px; }
+  section[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Add a lesson</h1>
+  <p class="lead">Upload a lesson video. The server makes it small enough for 3G phones and, when a speech model is set up, writes captions in the language spoken in the video. Then put one tag on your page.</p>
+
+  <form id="form" novalidate>
+    <label for="code">Staff access code</label>
+    <input id="code" type="password" autocomplete="current-password" required>
+
+    <label for="title">Lesson title</label>
+    <input id="title" type="text" required maxlength="200" aria-describedby="title-hint" autocomplete="off">
+    <p class="hint" id="title-hint">Learners and screen readers hear this name, for example “How to write a CV”.</p>
+
+    <label for="lang">Language spoken in the video</label>
+    <select id="lang" aria-describedby="lang-hint">
+      <option value="en">English</option>
+      <option value="am" lang="am">አማርኛ (Amharic)</option>
+      <option value="om" lang="om">Afaan Oromoo (Oromo)</option>
+      <option value="ti" lang="ti">ትግርኛ (Tigrinya)</option>
+    </select>
+    <p class="hint" id="lang-hint">Automatic captions are made in this language. Amharic speech recognition makes more mistakes: plan to check them.</p>
+
+    <label for="video">Video file</label>
+    <input id="video" type="file" accept="video/*" required aria-describedby="video-hint">
+    <p class="hint" id="video-hint">MP4, WebM or MOV, up to 1 GB.</p>
+
+    <button type="submit" class="primary" id="go">Upload and prepare</button>
+  </form>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <section id="progress-box" aria-labelledby="h-progress" hidden>
+    <h2 id="h-progress">Progress</h2>
+    <label for="upload-progress">Upload</label>
+    <progress id="upload-progress" max="100" value="0"></progress>
+    <ol class="steps">
+      <li id="step-upload">Upload the video</li>
+      <li id="step-convert">Convert it for slow connections (360p, 240p, audio only)</li>
+      <li id="step-captions">Make captions with the speech model</li>
+    </ol>
+  </section>
+
+  <section id="done" aria-labelledby="h-done" hidden tabindex="-1">
+    <h2 id="h-done">Your lesson is ready</h2>
+    <p id="done-message"></p>
+    <p>Put these two lines on the page where the lesson should play:</p>
+    <pre><code id="embed"></code></pre>
+    <button type="button" id="copy">Copy the code</button>
+    <ul class="links">
+      <li><a id="watch" href="#">Watch the lesson</a></li>
+      <li><a id="check" href="#">Check and correct the captions</a></li>
+      <li><a href="sign.html">Record sign language for it</a></li>
+    </ul>
+  </section>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const api = `${location.origin}/api/v1`;
+const say = (text, kind = '') => { $('status').textContent = text; $('status').className = `status ${kind}`; };
+const esc = (s) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+
+try { $('code').value = sessionStorage.getItem('studio-code') || ''; } catch {}
+$('code').addEventListener('change', () => { try { sessionStorage.setItem('studio-code', $('code').value); } catch {} });
+
+// Problems are said in words and focus goes to the first field that needs fixing.
+function check() {
+  for (const [id, text] of [['code', 'Enter the staff access code.'], ['title', 'Give the lesson a title.'], ['video', 'Choose the video file.']]) {
+    const el = $(id);
+    const empty = id === 'video' ? !el.files.length : !el.value.trim();
+    el.setAttribute('aria-invalid', String(empty));
+    if (empty) { say(text, 'bad'); el.focus(); return false; }
+  }
+  return true;
+}
+
+function upload(form) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${api}/lessons`);
+    xhr.setRequestHeader('Authorization', `Bearer ${$('code').value}`);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) $('upload-progress').value = Math.round((e.loaded / e.total) * 100); };
+    xhr.onload = () => {
+      let body = {};
+      try { body = JSON.parse(xhr.responseText); } catch {}
+      xhr.status === 202 ? resolve(body) : reject(new Error(body.message || `The server answered ${xhr.status}.`));
+    };
+    xhr.onerror = () => reject(new Error('The upload stopped. Check your connection and try again.'));
+    xhr.send(form);
+  });
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!check()) return;
+  const form = new FormData();
+  form.append('title', $('title').value.trim());
+  form.append('lang', $('lang').value);
+  form.append('video', $('video').files[0]);
+  $('go').disabled = true;
+  $('done').hidden = true;
+  $('progress-box').hidden = false;
+  for (const s of ['upload', 'convert', 'captions']) $(`step-${s}`).classList.remove('done');
+  say('Uploading the video…');
+  try {
+    const { id } = await upload(form);
+    $('step-upload').classList.add('done');
+    say('Uploaded. Converting the video for slow connections. This can take a few minutes; you can leave this page open.');
+    // Follow the lesson until it is ready. Messages are only announced when they change.
+    let last = '';
+    for (;;) {
+      await wait(2000);
+      const lesson = await (await fetch(`${api}/lessons/${id}`, { cache: 'no-store' })).json();
+      if (lesson.status !== 'processing') $('step-convert').classList.add('done');
+      if (lesson.status === 'failed') throw new Error(lesson.statusMessage);
+      if (lesson.statusMessage !== last) { last = lesson.statusMessage; say(last); }
+      if (lesson.status === 'ready') { finish(lesson); break; }
+    }
+  } catch (err) {
+    say(err.message, 'bad');
+  } finally {
+    $('go').disabled = false;
+  }
+});
+
+function finish(lesson) {
+  const auto = lesson.tracks.some((t) => t.kind === 'captions' && t.auto);
+  if (auto) $('step-captions').classList.add('done');
+  $('done-message').textContent = lesson.statusMessage;
+  $('embed').innerHTML = esc(`<script type="module" src="${location.origin}/module/db-player.js"></` + `script>\n<db-player lesson="${lesson.id}"></db-player>`);
+  $('watch').href = `/demo/?lesson=${encodeURIComponent(lesson.id)}`;
+  $('check').href = `captions.html?lesson=${encodeURIComponent(lesson.id)}`;
+  $('done').hidden = false;
+  say(`“${lesson.title}” is ready.`, 'ok');
+  $('done').focus();
+}
+
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('embed').textContent); say('Code copied. Paste it into your page.', 'ok'); }
+  catch { say('Select the code above and copy it.', 'bad'); }
+});
+</script>
+</body>
+</html>

@@ -65,7 +65,7 @@ test('caption editor: add and delete lines by keyboard, focus goes to the right 
 test('caption editor: a focused field is never hidden under the video (WCAG 2.4.11)', async ({ page }) => {
   test.skip(test.info().project.name === 'android', 'staff tool tested on desktop');
   await page.setViewportSize({ width: 1000, height: 800 });
-  await page.goto('/studio/captions.html');
+  await page.goto('/studio/captions.html?lesson=demo');
   await expect(page.getByRole('status')).toContainText('Loaded');
   for (const n of [4, 6]) {
     const field = page.getByRole('group', { name: `Line ${n}` }).getByLabel('Words');
