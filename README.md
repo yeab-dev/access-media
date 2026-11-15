@@ -10,6 +10,18 @@ A lesson video player that any learning platform or job board adds with one scri
 
 Around it: a recording studio for sign language interpreters, a caption editor, lesson documents (HTML and tagged PDF), accessible job cards that read themselves aloud, and certificates an employer can verify.
 
+## Try it live
+
+**https://access-media-rsi0.onrender.com** (hosted on Render; `GET /api/v1/health` shows the deployed commit)
+
+| | |
+|---|---|
+| [Home for lesson providers](https://access-media-rsi0.onrender.com/) | what you can do, in three steps |
+| [Get your key](https://access-media-rsi0.onrender.com/get-key) | an API key and a practice lesson in ten seconds |
+| [Documentation](https://access-media-rsi0.onrender.com/docs) | step-by-step guide and every call with "Try it out" |
+| [Debo Learning](https://access-media-rsi0.onrender.com/debo/) | a made-up lesson provider's site using the player |
+| [Player on a blank page](https://access-media-rsi0.onrender.com/demo/blank.html) · [inside Savanna](https://access-media-rsi0.onrender.com/savanna/pages/concept-with-navigation.html) | Level 1 install |
+
 ## For lesson providers: start here
 
 1. **Get your key** at `/get-key`: type your organisation's name, copy the key. It comes with a practice lesson that is yours.
@@ -212,6 +224,8 @@ Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcription
 - **Native-speaker review** of all Amharic.
 - **Service-worker offline**, **Braille (.brf)**, the **recorded live-session viewer**, and **LTI 1.3**.
 - `docker compose up` **has not yet been tested on another laptop**.
+- **Large uploads on slow connections:** on the hosted demo, an upload is cut after about 75 seconds (we measured about 7 MB at 90 KB/s from Addis Ababa). Upload a smaller file (for example 360p) or from a faster connection. Resumable uploads are not built.
+- **No speech model on the hosted demo yet:** lessons added there get no automatic captions (they work with `docker compose --profile asr up`, and on Render with the `access-media-asr` service from `render.yaml`).
 - **One key per organisation**, not per person: no separate staff logins or roles inside a provider. A lost key cannot be recovered (get a new one; ask the host to move lessons).
 - Swagger UI (the reference part of `/docs`) is a third-party page; axe-core is run on our header and pages, not on Swagger's own markup.
 - Savanna's own page has accessibility defects we did not fix (for example, its menu button is a `<div>`, and its red `#db3e3e` is under 4.5:1 contrast on white). Our components darken host colours to stay readable.
