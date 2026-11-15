@@ -1,6 +1,7 @@
 # Render Blueprint: Dashboard → New → Blueprint → pick this repository → Apply.
-# Two services: the app (player, API, docs, studio, example site) and a private speech model for automatic captions.
-# Both need a paid plan: the free plan has no disk, and too little memory for PDF printing and speech recognition.
+# One service: the app (player, API, docs, studio, example site), with automatic captions built in (whisper.cpp).
+# It needs a paid plan: the free plan has no disk, and too little memory for PDF printing and speech recognition.
+# For a free host, see README ("Free hosting").
 services:
   - type: web
     name: access-media
@@ -24,25 +25,5 @@ services:
         value: "10"
       - key: PROVIDER_MAX_UPLOAD_MB
         value: "200"
-      - key: ASR_MODEL
-        value: Systran/faster-whisper-small
-      - key: ASR_URL          # the private speech model below (host:port on Render's private network)
-        fromService:
-          type: pserv
-          name: access-media-asr
-          property: hostport
-
-  - type: pserv               # private: only the app can reach it; lesson audio never leaves Render
-    name: access-media-asr
-    runtime: image
-    image:
-      url: ghcr.io/speaches-ai/speaches:latest-cpu
-    plan: standard            # 2 GB memory for the "small" Whisper model
-    region: frankfurt
-    disk:
-      name: models            # the downloaded speech model, kept across restarts
-      mountPath: /home/ubuntu/.cache/huggingface
-      sizeGB: 2
-    envVars:
-      - key: HF_HUB_DISABLE_XET   # plain HTTPS model downloads (the newer downloader can hang)
-        value: "1"
+      - key: WHISPER_MODEL    # automatic captions inside the app (whisper.cpp); no separate service
+        value: base

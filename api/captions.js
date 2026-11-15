@@ -1,13 +1,12 @@
 // Caption pipeline: a speech model drafts, a person corrects lines and times (studio/captions.html), we save VTT.
-// The speech model is pluggable: any server with the OpenAI-style /v1/audio/transcriptions endpoint
-// (for example a local faster-whisper server). Set ASR_URL; nothing leaves the host unless the host sets it.
+// The speech model runs in this server (whisper.cpp) or on a separate speech server (ASR_URL): see speech.js.
+// Nothing leaves the host's machines.
 
 import express from 'express';
-import { spawn } from 'node:child_process';
-import { readFile, writeFile, rename, copyFile, rm, mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, writeFile, rename, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 import { isValidVtt, parseVtt } from './vtt.js';
+import { asrUrl, transcribe, speechMode } from './speech.js';
 import { requireStaff } from './sign.js';
 import { mayChange, notYours } from './auth.js';
 import { events } from './events.js';
@@ -33,63 +32,8 @@ export function checkVtt(text) {
   return problems;
 }
 
-function ffmpeg(args) {
-  return new Promise((resolve, reject) => {
-    const p = spawn('ffmpeg', ['-y', '-loglevel', 'error', ...args]);
-    let err = '';
-    p.stderr.on('data', (d) => { err += d; });
-    p.on('error', reject);
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.trim().slice(-300)))));
-  });
-}
-
-/**
- * Captions from the speech model for one media file. Throws with code 'no_speech_model' if ASR_URL is not set,
- * 'speech_model_error' if the model answers with an error. Used for editor drafts and for new uploads.
- */
-/** The speech model's address. Accepts "host:port" (as Render gives for private services) or a full URL. */
-export function asrUrl() {
-  const raw = (process.env.ASR_URL || '').trim().replace(/\/$/, '');
-  if (!raw) return '';
-  return /^https?:\/\//.test(raw) ? raw : `http://${raw}`;
-}
-
-/** Ask the speech server to download the model now, so the first lesson does not wait for it. Harmless if it has it. */
-export async function warmUpSpeechModel() {
-  const asr = asrUrl();
-  if (!asr) return;
-  const model = process.env.ASR_MODEL || 'Systran/faster-whisper-small';
-  try {
-    const r = await fetch(`${asr}/v1/models/${model}`, { method: 'POST', signal: AbortSignal.timeout(30 * 60_000) });
-    console.log(`speech model ${model}: ${r.ok ? 'ready' : `not ready (${r.status})`}`);
-  } catch (err) {
-    console.warn(`speech model ${model}: could not reach ${asr} (${err.message}). Automatic captions will fail until it is up.`);
-  }
-}
-
-export async function transcribe(mediaFile, lang) {
-  const asr = asrUrl();
-  if (!asr) throw Object.assign(new Error('No speech model is set up (ASR_URL).'), { code: 'no_speech_model' });
-  const model = process.env.ASR_MODEL || 'Systran/faster-whisper-small';
-  const work = await mkdtemp(path.join(tmpdir(), 'db-asr-'));
-  try {
-    const audio = path.join(work, 'audio.mp3');
-    // 16 kHz mono is what speech models expect, and keeps the upload small.
-    await ffmpeg(['-i', mediaFile, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '32k', audio]);
-    const form = new FormData();
-    form.append('file', new Blob([await readFile(audio)], { type: 'audio/mpeg' }), 'audio.mp3');
-    form.append('model', model);
-    form.append('language', lang);
-    form.append('response_format', 'vtt');
-    const r = await fetch(`${asr}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(10 * 60_000) });
-    if (!r.ok) throw Object.assign(new Error(`The speech model answered with an error (${r.status}).`), { code: 'speech_model_error' });
-    let vtt = await r.text();
-    if (!isValidVtt(vtt)) vtt = `WEBVTT\n\n${vtt}`;
-    return { vtt: vtt.replace(/\r\n?/g, '\n'), model };
-  } finally {
-    await rm(work, { recursive: true, force: true });
-  }
-}
+// Speech to text lives in speech.js (whisper.cpp in this server, or a separate speech server).
+export { asrUrl, warmUpSpeechModel, transcribe, speechMode } from './speech.js';
 
 export function captionsRouter({ lessonsDir }) {
   const router = express.Router();
@@ -136,10 +80,12 @@ export function captionsRouter({ lessonsDir }) {
     if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
     const lang = String(req.body?.lang || 'en');
     if (!LANG.test(lang)) return bad(res, 'invalid_lang', 'Give the language as a code, for example "am" or "en".');
-    if (!process.env.ASR_URL) {
+    const mode = speechMode();
+    if (!mode) {
       return bad(res, 'no_speech_model',
-        'No speech model is set up on this server, so there is no automatic draft. Start from the existing captions or an empty file. (Hosts: set ASR_URL to a local faster-whisper server.)', 503);
+        'No speech model is set up on this server, so there is no automatic draft. Start from the existing captions or an empty file. (Hosts: install whisper.cpp, as the Docker image does, or set ASR_URL.)', 503);
     }
+    if (mode === 'loading') return bad(res, 'speech_model_loading', 'The speech model is still downloading on this server. Try again in a few minutes.', 503);
     let manifest;
     try { manifest = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
     if (!mayChange(req, manifest.owner)) return notYours(res);

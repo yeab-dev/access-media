@@ -63,9 +63,17 @@ Open **http://localhost:8080**.
 | `/studio/sign.html` | Record an interpreter for a lesson (staff) |
 | `/studio/captions.html` | Correct captions and audio description (staff) |
 
-Automatic captions on your own machine: `docker compose --profile asr up` (a local faster-whisper server; the model downloads on first start).
+**Automatic captions are built in:** the image includes whisper.cpp, and the speech model (`WHISPER_MODEL`, default `base`, 150 MB) downloads into the data volume on first start. No extra service, and lesson audio never leaves the server. (A separate faster-whisper server also works: `docker compose --profile asr up` and `ASR_URL`.)
 
-**Hosted on Render:** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app (with a 10 GB disk) and a private speech model; the master key is generated for you (Environment → `ADMIN_TOKEN`). Then add the example lesson used by the Debo site: `SERVER=https://<your-app>.onrender.com KEY=<master key> ./scripts/add-example-lesson.sh`.
+**Free hosting (Oracle Cloud "Always Free"):** create an Always Free **Ampere A1** server (Ubuntu 24.04, 2 OCPUs, 12 GB) with a public IP, allow TCP 80 and 443 in its subnet's Security List, then on the server:
+```sh
+curl -fsSL https://raw.githubusercontent.com/yeab-dev/access-media/main/scripts/server-setup.sh | bash
+```
+[`scripts/server-setup.sh`](scripts/server-setup.sh) installs Docker, opens the firewall, makes `.env` with a new master key, and starts the app behind Caddy with a free Let's Encrypt certificate at `https://<ip-with-dashes>.sslip.io` (no domain to buy). Uses the better `small` speech model.
+
+**Render free plan (what the live demo uses):** a Docker web service with these environment variables: `ADMIN_TOKEN`, `TRUST_PROXY=1`, `SIGNUP=open`, and `WHISPER_MODEL=tiny` (512 MB of memory fits only the tiny speech model; captions take a few minutes per lesson). The free plan has **no disk and sleeps after 15 minutes idle**: each restart starts again from the demo lesson, so keys and uploaded lessons do not last. Fine for trying it; use a paid plan with a disk, or a free server with `scripts/server-setup.sh`, to keep data.
+
+**Hosted on Render (paid):** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app with a 10 GB disk; the master key is generated for you (Environment → `ADMIN_TOKEN`). Then add the example lesson used by the Debo site: `SERVER=https://<your-app>.onrender.com KEY=<master key> ./scripts/add-example-lesson.sh`.
 
 Without Docker (Node 22+, ffmpeg; Chromium for PDFs):
 
@@ -203,14 +211,15 @@ Rough, for **3,000 learners a month**, assuming each watches 20 ten-minute lesso
 
 - **Traffic:** about 20 MB per lesson view → about 1.2 TB a month.
 - **Server:** one small virtual server (2 vCPU, 4 GB RAM, about 40 GB disk) with a few TB of traffic included: **about US$10–30 a month** at common European providers. Prices in Ethiopian data centres were not checked.
-- **On Render** (as in `render.yaml`): the app and the speech model on "Standard" instances (2 GB each) plus 12 GB of disk: **about US$50 a month** at Render's list prices when we wrote this (check render.com/pricing), plus traffic beyond the included amount. The speech model can be left out (captions by hand) to halve it.
-- **Paid APIs:** none. Captions use an optional local open model (`docker compose --profile asr up`), on the same server's CPU.
+- **Free:** Oracle Cloud "Always Free" (2 Arm CPUs, 12 GB memory, 200 GB disk, as reported in mid-2026) runs everything, speech model included: **US$0**. Check Oracle's current Always Free terms for the monthly traffic allowance against the ~1.2 TB estimated above, and watch the CPU when many lessons are converted at once.
+- **On Render** (as in `render.yaml`): one "Standard" instance (2 GB) with the speech model inside, plus 10 GB of disk: **about US$27.50 a month** at Render's list prices when we wrote this (check render.com/pricing).
+- **Paid APIs:** none. Captions come from an open model (whisper.cpp) on the same server's CPU.
 
 ## Caption quality
 
 **Automatic captions for new lessons:** when a provider adds a lesson (`/studio/lessons.html` or `POST /api/v1/lessons`) and a speech model is set up, captions in the spoken language are made without any caption file from the provider. Learners see them at once, labelled "English (automatic)" with a visible note that they may have mistakes, until a person checks and saves them in the caption editor. Without a speech model the lesson is still converted and ready; captions are then added by hand.
 
-Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcriptions` server; `docker compose --profile asr up` starts faster-whisper locally). A person corrects every line in `/studio/captions.html`. `node scripts/caption-quality.mjs draft.vtt corrected.vtt` reports the word error rate and timing drift.
+Drafts come from an open speech model running inside the server (whisper.cpp with a Whisper model: `WHISPER_MODEL=base` by default, `small` for better quality), or from any OpenAI-style `/v1/audio/transcriptions` server (`ASR_URL`). A person corrects every line in `/studio/captions.html`. `node scripts/caption-quality.mjs draft.vtt corrected.vtt` reports the word error rate and timing drift.
 
 **Honestly:** the demo lesson is silent placeholder slides, so **we have not measured draft quality on real English or Amharic speech.** Whisper's Amharic is known to be weak; plan for a person to rewrite most Amharic lines.
 
@@ -225,7 +234,6 @@ Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcription
 - **Service-worker offline**, **Braille (.brf)**, the **recorded live-session viewer**, and **LTI 1.3**.
 - `docker compose up` **has not yet been tested on another laptop**.
 - **Large uploads on slow connections:** on the hosted demo, an upload is cut after about 75 seconds (we measured about 7 MB at 90 KB/s from Addis Ababa). Upload a smaller file (for example 360p) or from a faster connection. Resumable uploads are not built.
-- **No speech model on the hosted demo yet:** lessons added there get no automatic captions (they work with `docker compose --profile asr up`, and on Render with the `access-media-asr` service from `render.yaml`).
 - **One key per organisation**, not per person: no separate staff logins or roles inside a provider. A lost key cannot be recovered (get a new one; ask the host to move lessons).
 - Swagger UI (the reference part of `/docs`) is a third-party page; axe-core is run on our header and pages, not on Swagger's own markup.
 - Savanna's own page has accessibility defects we did not fix (for example, its menu button is a `<div>`, and its red `#db3e3e` is under 4.5:1 contrast on white). Our components darken host colours to stay readable.
@@ -245,7 +253,10 @@ Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcription
 | ffmpeg (Debian package) | Video, audio, sign recordings | LGPL-2.1+ / GPL-2+ |
 | Chromium (Debian package) | Tagged PDF | BSD-3-Clause and others |
 | Noto fonts, DejaVu fonts | Ethiopic and Latin text in PDFs and demo slides | OFL-1.1; Bitstream Vera licence |
-| speaches / faster-whisper (optional) | Local caption drafts | MIT |
+| whisper.cpp 1.9.5 | Automatic captions (built into the image) | MIT |
+| Whisper models (ggml conversions) | Speech recognition model | MIT |
+| Caddy 2.8.4 (optional, `https` profile) | HTTPS with Let's Encrypt | Apache-2.0 |
+| speaches / faster-whisper (optional) | Separate caption server | MIT |
 
 The module itself (`module/`) has **no runtime dependencies**.
 
