@@ -258,4 +258,3 @@ Drafts come from an open speech model running inside the server (whisper.cpp wit
 
 The module itself (`module/`) has **no runtime dependencies**.
 
-**Code licence:** _TODO: the open licence ALX named at kick-off._ Code may be used and published by ALX and its partners; the team is credited by name.
