@@ -6,10 +6,11 @@ import express from 'express';
 import multer from 'multer';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { readFile, writeFile, rename, rm, mkdir, readdir } from 'node:fs/promises';
+import { readFile, writeFile, rename, rm, mkdir, readdir, cp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { requireStaff } from './sign.js';
+import { requireKey, mayChange, notYours, ownerOf, limits } from './auth.js';
+import { publicOrigin, embedCode } from './origin.js';
 import { transcribe } from './captions.js';
 import { parseVtt } from './vtt.js';
 import { events } from './events.js';
@@ -152,10 +153,12 @@ export function lessonsRouter({ lessonsDir }) {
   }
 
   // Upload a lesson video. Answers at once (202); follow GET /lessons/{id} until status is "ready".
-  router.post('/lessons', requireStaff, upload.single('video'), async (req, res, next) => {
+  router.post('/lessons', requireKey, checkQuota, upload.single('video'), async (req, res, next) => {
     const tmp = req.file?.path;
     let kept = false;
     try {
+      const max = req.who.admin ? Infinity : limits().uploadMB * 1024 * 1024;
+      if (req.file && req.file.size > max) return bad(res, 'too_large', `The video is too large: ${limits().uploadMB} MB at most for each lesson.`, 413);
       const title = String(req.body?.title || '').trim();
       const lang = String(req.body?.lang || 'en');
       if (!req.file) return bad(res, 'no_video', 'Send the lesson video as a file field named "video".');
@@ -183,17 +186,143 @@ export function lessonsRouter({ lessonsDir }) {
       kept = true;
       const manifest = {
         id, title, lang, duration: 0, status: 'processing', statusMessage: 'Converting the video for slow connections.',
-        createdAt: new Date().toISOString(), sources: [], tracks: [],
+        createdAt: new Date().toISOString(), owner: ownerOf(req), sources: [], tracks: [],
       };
       await writeManifest(id, manifest);
       prepare(id, original, lang); // in the background; errors end up in the lesson's status
-      const href = `${req.protocol}://${req.get('host')}/api/v1/lessons/${id}`;
-      res.status(202).location(href).json({ id, status: manifest.status, statusMessage: manifest.statusMessage, href, embed: `<db-player lesson="${id}"></db-player>` });
+      const href = `${publicOrigin(req)}/api/v1/lessons/${id}`;
+      res.status(202).location(href).json({ id, status: manifest.status, statusMessage: manifest.statusMessage, href, embed: embedCode(req, id) });
     } catch (err) {
       next(err);
     } finally {
       if (tmp && !kept) await rm(tmp, { force: true }).catch(() => {});
     }
+  });
+
+  /** Lessons this caller owns (the master key: all lessons). */
+  async function ownLessons(req) {
+    const out = [];
+    for (const d of await readdir(lessonsDir, { withFileTypes: true }).catch(() => [])) {
+      if (!d.isDirectory() || !ID.test(d.name)) continue;
+      const m = await readManifest(d.name).catch(() => null);
+      if (m && (req.who.admin || (m.owner && m.owner === req.who.provider?.id))) out.push(m);
+    }
+    return out;
+  }
+
+  // Before taking a large upload: is there room for one more lesson, and is the file small enough?
+  async function checkQuota(req, res, next) {
+    if (req.who.admin) return next();
+    const { lessons, uploadMB } = limits();
+    if (Number(req.get('content-length') || 0) > (uploadMB + 1) * 1024 * 1024) {
+      return bad(res, 'too_large', `The video is too large: ${uploadMB} MB at most for each lesson.`, 413);
+    }
+    if ((await ownLessons(req)).length >= lessons) {
+      return bad(res, 'limit_reached', `You have ${lessons} lessons, the most a key can have on this server. Delete one first (DELETE /api/v1/lessons/{id}).`, 403);
+    }
+    next();
+  }
+
+  // My lessons, with the code to put each one on a page.
+  router.get('/me/lessons', requireKey, async (req, res) => {
+    const list = (await ownLessons(req)).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    res.json({
+      lessons: list.map((m) => ({
+        id: m.id, title: m.title, lang: m.lang, duration: m.duration, status: m.status || 'ready', statusMessage: m.statusMessage,
+        captions: (m.tracks || []).filter((t) => t.kind === 'captions').map((t) => ({ lang: t.srclang, automatic: !!t.auto })),
+        audioDescription: (m.tracks || []).filter((t) => t.kind === 'descriptions').map((t) => t.srclang),
+        signLanguage: !!m.sign?.src && !m.sign.placeholder,
+        href: `${publicOrigin(req)}/api/v1/lessons/${m.id}`,
+        embed: embedCode(req, m.id),
+      })),
+      limits: req.who.admin ? null : limits(),
+    });
+  });
+
+  // Change a lesson's title, its title in other languages, or its spoken language.
+  router.patch('/lessons/:id', requireKey, express.json({ limit: '20kb' }), async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    let m;
+    try { m = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, m.owner)) return notYours(res);
+    const { title, titles, lang } = req.body || {};
+    const fields = {};
+    if (title !== undefined) {
+      if (typeof title !== 'string' || !title.trim() || title.length > 200) return bad(res, 'invalid_title', 'The title must be 1 to 200 characters.');
+      fields.title = title.trim();
+    }
+    if (titles !== undefined) {
+      if (!titles || typeof titles !== 'object' || Array.isArray(titles)) return bad(res, 'invalid_titles', 'Give titles as {"am": "…"}: a language code and the title in that language.');
+      for (const [k, v] of Object.entries(titles)) {
+        if (!LANG.test(k)) return bad(res, 'invalid_titles', `"${k}" is not a language code. Use codes like "am" or "om".`);
+        if (v !== null && (typeof v !== 'string' || v.length > 200)) return bad(res, 'invalid_titles', `The ${k} title must be up to 200 characters (or null to remove it).`);
+      }
+      const merged = { ...(m.titles || {}), ...titles };
+      for (const k of Object.keys(merged)) if (merged[k] === null || merged[k] === '') delete merged[k];
+      fields.titles = merged;
+    }
+    if (lang !== undefined) {
+      if (!LANG.test(String(lang))) return bad(res, 'invalid_lang', 'Give the spoken language as a code, for example "am" or "en".');
+      fields.lang = lang;
+    }
+    if (!Object.keys(fields).length) return bad(res, 'nothing_to_change', 'Send at least one of: title, titles, lang.');
+    const updated = await update(id, fields);
+    res.json({ id, title: updated.title, titles: updated.titles || {}, lang: updated.lang });
+  });
+
+  // Slides: when each picture appears, a short title and a real description of it, in each language.
+  // Used for the lesson document (HTML and tagged PDF): one section per slide, the description as the image's alt text.
+  router.get('/lessons/:id/slides', async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    try { await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    const data = await readFile(path.join(dirOf(id), 'images.json'), 'utf8').then(JSON.parse).catch(() => ({ images: [] }));
+    res.json({ slides: data.images || [] });
+  });
+
+  router.put('/lessons/:id/slides', requireKey, express.json({ limit: '200kb' }), async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    let m;
+    try { m = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, m.owner)) return notYours(res);
+    const slides = req.body?.slides;
+    if (!Array.isArray(slides) || slides.length > 500) return bad(res, 'invalid_slides', 'Send {"slides": [...]}: a list of up to 500 slides.');
+    const clean = [];
+    for (const [i, s] of slides.entries()) {
+      const n = i + 1;
+      const time = Number(s?.time);
+      if (!Number.isFinite(time) || time < 0) return bad(res, 'invalid_slides', `Slide ${n}: "time" must be the second the slide appears, for example 12.5.`);
+      const entry = { time };
+      for (const [k, v] of Object.entries(s)) {
+        if (k === 'time') continue;
+        if (!LANG.test(k) || !v || typeof v !== 'object') return bad(res, 'invalid_slides', `Slide ${n}: "${k}" is not a language. Give text per language: {"time": 5, "en": {"title": "…", "alt": "…"}}.`);
+        const title = typeof v.title === 'string' ? v.title.trim().slice(0, 200) : undefined;
+        const alt = typeof v.alt === 'string' ? v.alt.trim().slice(0, 1000) : undefined;
+        if (!title && !alt) return bad(res, 'invalid_slides', `Slide ${n} (${k}): give a "title", an "alt" (what the picture shows), or both.`);
+        entry[k] = { ...(title ? { title } : {}), ...(alt ? { alt } : {}) };
+      }
+      if (Object.keys(entry).length === 1) return bad(res, 'invalid_slides', `Slide ${n}: give its text in at least one language, for example "en": {"title": "…", "alt": "…"}.`);
+      clean.push(entry);
+    }
+    clean.sort((a, b) => a.time - b.time);
+    const file = path.join(dirOf(id), 'images.json');
+    await writeFile(`${file}.tmp`, JSON.stringify({ images: clean }, null, 2));
+    await rename(`${file}.tmp`, file);
+    res.json({ slides: clean, document: `${publicOrigin(req)}/api/v1/lessons/${id}/document` });
+  });
+
+  // Delete a lesson and all its files (video, captions, sign language, documents, offline pack).
+  router.delete('/lessons/:id', requireKey, async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    let m;
+    try { m = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, m.owner)) return notYours(res);
+    if (m.status === 'processing' || m.status === 'captioning') return bad(res, 'busy', 'This lesson is still being prepared. Delete it when it is ready.', 409);
+    await rm(dirOf(id), { recursive: true, force: true });
+    res.status(204).end();
   });
 
   router.use((err, _req, res, next) => {

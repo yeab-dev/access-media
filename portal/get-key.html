@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get your API key — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key" aria-current="page">Get your key</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/debo/">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Get your API key</h1>
+  <p class="lead">Your key lets you add lessons, captions, sign language, jobs and certificates. It only changes your own things. No email or password needed.</p>
+
+  <form id="form" novalidate>
+    <label for="org">Your organisation's name</label>
+    <input id="org" type="text" autocomplete="organization" maxlength="80" aria-describedby="org-hint" required>
+    <p class="hint" id="org-hint">For example “Debo Learning”. It is shown on certificates you give learners.</p>
+    <div class="actions"><button class="btn" type="submit" id="go">Get my key</button></div>
+  </form>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <section id="done" aria-labelledby="h-done" hidden tabindex="-1">
+    <h2 id="h-done">Your key</h2>
+    <p><strong>Copy it now and keep it safe: it is shown only once.</strong> Anyone with it can change your lessons. Lost it? Make a new one in the <a href="/docs#/1.%20Get%20started">documentation</a> (“Make a new key”) while you still have the old one, or get a new key here.</p>
+    <label for="key">API key</label>
+    <input id="key" class="keybox" type="text" readonly>
+    <div class="actions">
+      <button class="btn" type="button" id="copy">Copy the key</button>
+    </div>
+    <p class="muted">This browser tab remembers it until you close it, so the studio pages and the documentation's “Try it out” are already filled in.</p>
+
+    <div class="card">
+      <h3 id="h-practice">Your practice lesson</h3>
+      <p>We made you a copy of a short lesson that is yours to change: try captions, audio description, sign language and slides on it. To show it on a page, paste:</p>
+      <pre><code id="practice-embed"></code></pre>
+      <button class="btn secondary" type="button" id="copy-embed">Copy the code</button>
+    </div>
+
+    <h3>Next</h3>
+    <ul>
+      <li><a id="next-captions" href="/studio/captions.html">Correct the practice lesson's captions</a></li>
+      <li><a href="/studio/lessons.html">Add your own lesson (upload a video)</a></li>
+      <li><a href="/docs">Use the API: every call, with “Try it out”</a></li>
+    </ul>
+    <p class="muted">Limits for each key on this server: <span id="limits"></span>.</p>
+  </section>
+
+  <section aria-labelledby="h-have">
+    <h2 id="h-have">Already have a key?</h2>
+    <form id="check-form" novalidate>
+      <label for="have">Paste your key</label>
+      <input id="have" type="password" autocomplete="off" spellcheck="false">
+      <div class="actions"><button class="btn secondary" type="submit">Use this key</button></div>
+    </form>
+  </section>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const say = (text, kind = '') => { $('status').textContent = text; $('status').className = `status ${kind}`; };
+const remember = (key) => { try { sessionStorage.setItem('studio-code', key); } catch {} };
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const org = $('org').value.trim();
+  if (org.length < 2) { $('org').setAttribute('aria-invalid', 'true'); say('Type your organisation\'s name (at least 2 letters).', 'bad'); $('org').focus(); return; }
+  $('org').removeAttribute('aria-invalid');
+  $('go').disabled = true;
+  say('Making your key…');
+  try {
+    const res = await fetch('/api/v1/keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organisation: org }) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || `The server answered ${res.status}.`);
+    remember(body.key);
+    $('key').value = body.key;
+    if (body.practiceLesson) {
+      $('practice-embed').textContent = body.practiceLesson.embed;
+      $('next-captions').href = `/studio/captions.html?lesson=${encodeURIComponent(body.practiceLesson.id)}`;
+    } else {
+      $('practice-embed').closest('.card').hidden = true;
+    }
+    const l = body.limits;
+    $('limits').textContent = `${l.lessons} lessons, videos up to ${l.uploadMB} MB, ${l.jobs} jobs, ${l.webhooks} webhooks`;
+    $('done').hidden = false;
+    $('form').hidden = true;
+    say(`Your key for ${body.provider.name} is ready.`, 'ok');
+    $('done').focus();
+  } catch (err) {
+    say(err.message, 'bad');
+  } finally {
+    $('go').disabled = false;
+  }
+});
+
+async function copy(text, done) {
+  try { await navigator.clipboard.writeText(text); say(done, 'ok'); }
+  catch { say('Select the text and copy it with your keyboard or menu.', 'bad'); }
+}
+$('copy').addEventListener('click', () => copy($('key').value, 'Key copied. Keep it somewhere safe, like a password manager.'));
+$('copy-embed').addEventListener('click', () => copy($('practice-embed').textContent, 'Code copied. Paste it into your lesson page.'));
+
+$('check-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const key = $('have').value.trim();
+  if (!key) { say('Paste your key first.', 'bad'); $('have').focus(); return; }
+  const res = await fetch('/api/v1/me', { headers: { Authorization: `Bearer ${key}` } });
+  if (!res.ok) { say('That key does not work on this server. Check it, or get a new one above.', 'bad'); return; }
+  const me = await res.json();
+  remember(key);
+  say(`This key belongs to ${me.admin ? 'the host (master key)' : me.provider.name}. This tab will use it in the studio pages and the documentation.`, 'ok');
+});
+</script>
+</body>
+</html>

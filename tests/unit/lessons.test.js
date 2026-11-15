@@ -69,7 +69,7 @@ test('without a speech model: the lesson is converted for 3G and says captions m
   assert.equal(res.status, 202);
   const body = await res.json();
   assert.equal(body.id, 'no-asr');
-  assert.equal(body.embed, '<db-player lesson="no-asr"></db-player>');
+  assert.match(body.embed, /^<script type="module" src="http:\/\/localhost:\d+\/module\/db-player\.js"><\/script>\n<db-player lesson="no-asr"><\/db-player>$/);
   assert.equal((await (await fetch(body.href)).json()).status, 'processing');
   const lesson = await untilDone('no-asr');
   assert.equal(lesson.status, 'ready');

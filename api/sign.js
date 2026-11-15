@@ -4,35 +4,17 @@
 import express from 'express';
 import multer from 'multer';
 import { spawn } from 'node:child_process';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, writeFile, rename, rm, mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 import { events } from './events.js';
+import { requireKey, mayChange, notYours } from './auth.js';
 import os from 'node:os';
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const MAX_UPLOAD = 300 * 1024 * 1024; // a 10-minute webcam recording fits comfortably
 
-/**
- * Staff access code for uploads. Set ADMIN_TOKEN in .env; if it is missing we make one up at start
- * and print it, so a server is never left open by accident.
- */
-export function adminToken() {
-  if (!process.env.ADMIN_TOKEN) {
-    process.env.ADMIN_TOKEN = randomBytes(12).toString('base64url');
-    console.log(`ADMIN_TOKEN was not set. Access code for this run: ${process.env.ADMIN_TOKEN}`);
-  }
-  return process.env.ADMIN_TOKEN;
-}
-
-export function requireStaff(req, res, next) {
-  const expected = Buffer.from(adminToken());
-  const given = Buffer.from(String(req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
-    return res.status(401).json({ error: 'unauthorised', message: 'This needs the staff access code.' });
-  }
-  next();
-}
+// Keys: the host's master key or a provider's own key (see auth.js). requireStaff is kept as the shared name.
+export { adminToken, requireKey as requireStaff } from './auth.js';
 
 function ffmpeg(args) {
   return new Promise((resolve, reject) => {
@@ -96,7 +78,7 @@ export function signRouter({ lessonsDir, dataDir }) {
   });
 
   // Attach an interpreter recording to a lesson.
-  router.post('/lessons/:id/sign', requireStaff, upload.single('video'), async (req, res, next) => {
+  router.post('/lessons/:id/sign', requireKey, upload.single('video'), async (req, res, next) => {
     const { id } = req.params;
     const tmp = req.file?.path;
     try {
@@ -106,6 +88,7 @@ export function signRouter({ lessonsDir, dataDir }) {
       if (!Number.isFinite(offset) || Math.abs(offset) > 10) return res.status(400).json({ error: 'invalid_offset', message: 'The timing adjustment must be between -10 and 10 seconds.' });
       let manifest;
       try { manifest = await readManifest(id); } catch { return res.status(404).json({ error: 'not_found', message: 'There is no lesson with this id.' }); }
+      if (!mayChange(req, manifest.owner)) return notYours(res);
 
       const dir = lessonDir(id);
       const out = path.join(dir, 'lesson.ethsl.mp4');

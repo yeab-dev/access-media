@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessible lessons for your website — Digital Bridge learning media</title>
+<meta name="description" content="Add one player to your lesson pages: English and Amharic captions, Ethiopian Sign Language, audio description, transcripts and offline downloads.">
+<link rel="stylesheet" href="/portal/portal.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/" aria-current="page">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/debo/">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Make your lessons work for every learner</h1>
+  <p class="lead">You make lesson videos. Put them on your website with our player and every lesson gets English and Amharic captions, an Ethiopian Sign Language window, audio description for blind learners, a transcript, and a small download for slow phones. Free and open source.</p>
+  <div class="actions">
+    <a class="btn" href="/get-key">Get your key</a>
+    <a class="btn secondary" href="/docs">Read the documentation</a>
+  </div>
+
+  <h2>Three steps</h2>
+  <ol class="steps">
+    <li>
+      <h3>Get your key</h3>
+      <p>Type your organisation's name. You get a key at once, plus a practice lesson to try everything on.</p>
+      <p><a href="/get-key">Get your key</a></p>
+    </li>
+    <li>
+      <h3>Add a lesson</h3>
+      <p>Upload a video. We make it small enough for 3G phones and write captions from the speech in it.</p>
+      <p><a href="/studio/lessons.html">Add a lesson</a></p>
+    </li>
+    <li>
+      <h3>Put it on your page</h3>
+      <p>Paste two lines where the lesson should play. That is all your website needs.</p>
+<pre><code>&lt;script type="module" src="<span class="origin">https://this-server</span>/module/db-player.js"&gt;&lt;/script&gt;
+&lt;db-player lesson="your-lesson"&gt;&lt;/db-player&gt;</code></pre>
+    </li>
+  </ol>
+
+  <h2>Everything you can do</h2>
+  <p>Each one works in the browser (the links) and through the API (the <a href="/docs">documentation</a> has an example for every call).</p>
+  <ul class="grid">
+    <li><h3>Lessons</h3><p>Upload videos, change titles (also in Amharic), delete lessons, see all of yours with the code for each page.</p><p><a href="/studio/lessons.html">Add a lesson</a></p></li>
+    <li><h3>Captions</h3><p>Automatic first draft from the speech; you correct the words and times. English, Amharic and any other language.</p><p><a href="/studio/captions.html">Caption editor</a></p></li>
+    <li><h3>Audio description</h3><p>Short lines that say what is on screen. The player reads them aloud for blind learners.</p><p><a href="/studio/captions.html">Write descriptions</a></p></li>
+    <li><h3>Ethiopian Sign Language</h3><p>An interpreter records in the browser while the lesson plays. Learners can move and resize the window.</p><p><a href="/studio/sign.html">Sign language studio</a></p></li>
+    <li><h3>Documents and offline</h3><p>Each lesson also becomes a web page, a tagged PDF and an offline pack for slow phones. Add slide descriptions for the pictures.</p><p><a href="/docs#/3.%20Captions%20and%20descriptions">How</a></p></li>
+    <li><h3>Jobs</h3><p>Job cards that read themselves aloud, in English and Amharic, and that job search engines understand.</p><p><a href="/docs#/5.%20Jobs%20and%20certificates">How</a></p></li>
+    <li><h3>Certificates</h3><p>A link learners send to employers. The employer's page checks it is real.</p><p><a href="/certificates/demo-learner">See an example</a></p></li>
+    <li><h3>Webhooks</h3><p>Your own system hears when a lesson is ready, captions change or a sign video arrives.</p><p><a href="/docs#/6.%20Connect%20your%20systems">How</a></p></li>
+  </ul>
+
+  <h2>See it working</h2>
+  <ul>
+    <li><a href="/debo/">Debo Learning</a>: a made-up lesson provider's website using the player.</li>
+    <li><a href="/demo/blank.html">The player on an empty page</a> (no other styles).</li>
+    <li><a href="/savanna/pages/concept-with-navigation.html">The player inside Savanna</a>, the ALX learning platform.</li>
+  </ul>
+
+  <h2>Your learners' privacy</h2>
+  <p>No accounts for learners and no tracking. Lesson audio goes only to the speech model on this server, never to an outside service. For a key we keep only the name you type.</p>
+</main>
+<script>
+  for (const el of document.querySelectorAll('.origin')) el.textContent = location.origin;
+</script>
+</body>
+</html>

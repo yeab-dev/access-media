@@ -5,7 +5,7 @@ import { openSettings, chooseCaptions, chooseDescriptions } from './helpers.js';
 test('caption editor: correct a line, problems explained and linked, save, learners see it', async ({ page }) => {
   test.skip(test.info().project.name === 'android', 'staff tool tested on desktop');
   await page.goto('/studio/captions.html');
-  await page.getByLabel('Staff access code').fill('test-code');
+  await page.getByLabel('Your API key').fill('test-code');
   await page.getByRole('combobox', { name: 'Lesson' }).selectOption('studio-test');
   await page.getByRole('combobox', { name: 'Track' }).selectOption('captions:en');
   await expect(page.getByRole('status')).toContainText('Loaded 6 lines');

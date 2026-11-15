@@ -10,6 +10,18 @@ A lesson video player that any learning platform or job board adds with one scri
 
 Around it: a recording studio for sign language interpreters, a caption editor, lesson documents (HTML and tagged PDF), accessible job cards that read themselves aloud, and certificates an employer can verify.
 
+## For lesson providers: start here
+
+1. **Get your key** at `/get-key`: type your organisation's name, copy the key. It comes with a practice lesson that is yours.
+2. **Add a lesson** at `/studio/lessons.html` (or `POST /api/v1/lessons`): upload a video; captions are written from the speech.
+3. **Paste two lines** where the lesson should play:
+   ```html
+   <script type="module" src="https://YOUR-SERVER/module/db-player.js"></script>
+   <db-player lesson="your-lesson-id"></db-player>
+   ```
+
+Everything else (captions in other languages, audio description, sign language, slides, jobs, certificates, webhooks) is in the documentation at **`/docs`**. Every call has an example and a "Try it out" button that already uses your key.
+
 ## The main task we tested
 
 > A Deaf learner follows a lesson on a low-cost Android phone with the Ethiopian Sign Language window and Amharic captions; a blind learner follows the same lesson with TalkBack and audio description. Both do it alone.
@@ -19,7 +31,7 @@ _TODO: co-designer result (see the end of [CONFORMANCE.md](CONFORMANCE.md))._
 ## Run it
 
 ```sh
-cp .env.example .env        # set ADMIN_TOKEN to a long random code: the staff access code
+cp .env.example .env        # set ADMIN_TOKEN to a long random code: the host's master key
 docker compose up --build   # first start builds the demo lesson (about a minute)
 ```
 
@@ -27,6 +39,10 @@ Open **http://localhost:8080**.
 
 | Address | What |
 |---|---|
+| `/` | For lesson providers: what you can do, in three steps |
+| `/get-key` | Get your API key (organisation name only) |
+| `/docs` | Documentation: a step-by-step guide and every call with "Try it out" |
+| `/debo/` | Debo Learning, a made-up lesson provider's website that uses the player |
 | `/demo/blank.html` | The player on an empty page: no Bootstrap, no Savanna CSS, attributes only |
 | `/savanna/pages/concept-with-navigation.html` | Inside Savanna, under the lesson banner |
 | `/savanna/pages/jobs.html` | Career gateway: job cards and "share your certificate" |
@@ -34,7 +50,10 @@ Open **http://localhost:8080**.
 | `/studio/lessons.html` | Add a lesson: upload a video, get automatic captions and the code for your page (staff) |
 | `/studio/sign.html` | Record an interpreter for a lesson (staff) |
 | `/studio/captions.html` | Correct captions and audio description (staff) |
-| `/docs` | API documentation you can try in the browser |
+
+Automatic captions on your own machine: `docker compose --profile asr up` (a local faster-whisper server; the model downloads on first start).
+
+**Hosted on Render:** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app (with a 10 GB disk) and a private speech model; the master key is generated for you (Environment → `ADMIN_TOKEN`). Then add the example lesson used by the Debo site: `SERVER=https://<your-app>.onrender.com KEY=<master key> ./scripts/add-example-lesson.sh`.
 
 Without Docker (Node 22+, ffmpeg; Chromium for PDFs):
 
@@ -86,10 +105,24 @@ document.addEventListener('db-player:ready', (e) => e.detail);
 
 ## Install, Level 2: REST API
 
-[`openapi.yaml`](openapi.yaml), and interactive documentation at `/docs`. Reading is public; changes need `Authorization: Bearer $ADMIN_TOKEN`. Errors are `{ error, message }` with the message in words.
+[`openapi.yaml`](openapi.yaml), and interactive documentation at `/docs` with a step-by-step guide. Reading is public; changes need a key: `Authorization: Bearer <key>`.
+
+- **Provider keys** come from `/get-key` (or `POST /api/v1/keys`). A key changes only that provider's own lessons, jobs, certificates and webhooks, within limits (`PROVIDER_MAX_LESSONS`, `PROVIDER_MAX_UPLOAD_MB`, `PROVIDER_MAX_JOBS`). Keys are stored as SHA-256 hashes. `SIGNUP=closed` turns the page off.
+- **The master key** (`ADMIN_TOKEN`) can change everything.
+- Errors are `{ error, message }` with the message in words.
 
 ```sh
-B=http://localhost:8080/api/v1; T="Authorization: Bearer $ADMIN_TOKEN"
+B=http://localhost:8080/api/v1
+curl -X POST $B/keys -H 'Content-Type: application/json' -d '{"organisation":"Debo Learning"}'   # → "key"
+T="Authorization: Bearer <your key>"
+curl $B/me -H "$T"
+curl $B/me/lessons -H "$T"                                          # your lessons, with the code for each page
+curl -X PATCH $B/lessons/<id> -H "$T" -H 'Content-Type: application/json' -d '{"titles":{"am":"ሲቪ እንዴት እንደሚጻፍ"}}'
+curl -X PUT $B/lessons/<id>/slides -H "$T" -H 'Content-Type: application/json' \
+     -d '{"slides":[{"time":0.5,"en":{"title":"Introduction","alt":"Title slide: How to write a CV."}}]}'
+curl -X DELETE $B/lessons/<id> -H "$T"
+curl -X POST $B/jobs -H "$T" -H 'Content-Type: application/json' -d @job.json   # see /docs for the fields
+curl -X POST $B/me/key -H "$T"                                       # a new key; the old one stops working
 curl $B/lessons
 curl -X POST $B/lessons -H "$T" -F video=@lesson.mp4 -F "title=How to write a CV" -F lang=en   # 202; follow status below
 curl $B/lessons/demo
@@ -146,6 +179,7 @@ Measured with `node scripts/measure-3g.mjs` (Chrome DevTools' classic "Slow 3G":
 - **Learners:** no account to watch. Settings (language, caption style, sign window) are kept only in the browser (`localStorage`).
 - **Sign language requests:** anonymous count and date per lesson. Nothing about the learner.
 - **Interpreter recordings:** stored with the lesson. **Sound is removed** before saving.
+- **Lesson providers:** only the organisation name they type. Their key is stored as a hash; no email or password.
 - **Certificates:** the learner's name, the achievement and the date: what the learner chooses to share with an employer. Webhooks never include names.
 - **Nothing leaves the host** unless the host sets it up: the speech model is local (`ASR_URL`, optional), and there are no analytics or third-party scripts.
 - **Delete:** lessons are folders in the `lessons` volume (`/data/lessons/<id>`); certificates are files in `/data/certificates/` (delete the file to withdraw one). Previous versions of captions and sign videos sit next to them (`*.previous*`).
@@ -157,6 +191,7 @@ Rough, for **3,000 learners a month**, assuming each watches 20 ten-minute lesso
 
 - **Traffic:** about 20 MB per lesson view → about 1.2 TB a month.
 - **Server:** one small virtual server (2 vCPU, 4 GB RAM, about 40 GB disk) with a few TB of traffic included: **about US$10–30 a month** at common European providers. Prices in Ethiopian data centres were not checked.
+- **On Render** (as in `render.yaml`): the app and the speech model on "Standard" instances (2 GB each) plus 12 GB of disk: **about US$50 a month** at Render's list prices when we wrote this (check render.com/pricing), plus traffic beyond the included amount. The speech model can be left out (captions by hand) to halve it.
 - **Paid APIs:** none. Captions use an optional local open model (`docker compose --profile asr up`), on the same server's CPU.
 
 ## Caption quality
@@ -169,7 +204,7 @@ Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcription
 
 ## Finished and not finished
 
-**Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, lesson upload with automatic captions, the API with documentation and a webhook, Docker. 40 unit tests and 73 browser tests, with axe-core showing zero critical or serious issues on every page we built.
+**Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, lesson upload with automatic captions, provider keys from a web page (each provider changes only its own things), API documentation with a guide and "Try it out", Render hosting, the API with documentation and a webhook, Docker. 48 unit tests and 76 browser tests, with axe-core showing zero critical or serious issues on every page we built.
 
 **Not finished:**
 - The **sign language video is a placeholder**. A real ESL recording is needed: use `/studio/sign.html` with an interpreter.
@@ -177,6 +212,8 @@ Drafts come from an open speech model (any OpenAI-style `/v1/audio/transcription
 - **Native-speaker review** of all Amharic.
 - **Service-worker offline**, **Braille (.brf)**, the **recorded live-session viewer**, and **LTI 1.3**.
 - `docker compose up` **has not yet been tested on another laptop**.
+- **One key per organisation**, not per person: no separate staff logins or roles inside a provider. A lost key cannot be recovered (get a new one; ask the host to move lessons).
+- Swagger UI (the reference part of `/docs`) is a third-party page; axe-core is run on our header and pages, not on Swagger's own markup.
 - Savanna's own page has accessibility defects we did not fix (for example, its menu button is a `<div>`, and its red `#db3e3e` is under 4.5:1 contrast on white). Our components darken host colours to stay readable.
 
 ## Libraries and their licences

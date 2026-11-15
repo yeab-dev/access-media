@@ -15,10 +15,10 @@ test('add a lesson: upload a video, follow progress, get the code for the page',
 
   // Missing fields are said in words, focus goes to the field.
   await page.getByRole('button', { name: 'Upload and prepare' }).click();
-  await expect(page.getByRole('status')).toHaveText('Enter the staff access code.');
-  await expect(page.getByLabel('Staff access code')).toBeFocused();
+  await expect(page.getByRole('status')).toHaveText('Enter your API key.');
+  await expect(page.getByLabel('Your API key')).toBeFocused();
 
-  await page.getByLabel('Staff access code').fill('test-code');
+  await page.getByLabel('Your API key').fill('test-code');
   await page.getByLabel('Lesson title').fill(`Upload test ${test.info().project.name} ${Date.now()}`);
   await page.getByLabel('Language spoken in the video').selectOption('en');
   await page.getByLabel('Video file').setInputFiles('.test-data/lessons/demo/lesson.mp4');

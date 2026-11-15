@@ -11,7 +11,7 @@ test('interpreter records a lesson in the browser and it appears in the player',
   test.setTimeout(60_000);
   await page.goto('/studio/sign.html');
   await page.getByRole('combobox', { name: 'Lesson' }).selectOption('studio-test');
-  await page.getByLabel('Staff access code').fill('test-code');
+  await page.getByLabel('Your API key').fill('test-code');
 
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations.filter((v) => ['critical', 'serious'].includes(v.impact)).map((v) => v.id)).toEqual([]);
@@ -42,5 +42,5 @@ test('saving without the access code is refused in words', async ({ page }) => {
   test.skip(test.info().project.name === 'android', 'studio runs on desktop');
   const res = await page.request.post('/api/v1/lessons/studio-test/sign', { multipart: { offset: '0' } });
   expect(res.status()).toBe(401);
-  expect((await res.json()).message).toContain('staff access code');
+  expect((await res.json()).message).toContain('API key');
 });
