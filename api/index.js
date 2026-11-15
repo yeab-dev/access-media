@@ -209,6 +209,24 @@ async function practiceLesson(provider, req) {
   };
 }
 
+/**
+ * Ready-made example lessons that ship with the app (demo/data/lessons/<id> with its media and captions).
+ * Copied into the data folder when missing, so they are there after every restart, even on a host with no disk.
+ * ("demo" itself is built by scripts/make-demo.sh.)
+ */
+export async function seedLessons() {
+  const from = path.join(ROOT, 'demo', 'data', 'lessons');
+  for (const d of await readdir(from, { withFileTypes: true }).catch(() => [])) {
+    if (!d.isDirectory() || d.name === 'demo' || !ID.test(d.name)) continue;
+    const m = await readFile(path.join(from, d.name, 'manifest.json'), 'utf8').then(JSON.parse).catch(() => null);
+    if (!m?.sources?.length) continue;
+    const to = path.join(LESSONS_DIR, d.name);
+    if (await readFile(path.join(to, 'manifest.json')).then(() => true, () => false)) continue;
+    await cp(path.join(from, d.name), to, { recursive: true });
+    console.log(`example lesson added: ${d.name}`);
+  }
+}
+
 /** A test certificate so the jobs page has something to share. Fixed id: demo-learner. */
 export async function ensureDemoCertificate(port = PORT) {
   const file = path.join(DATA_DIR, 'certificates', 'demo-learner.json');
@@ -229,6 +247,7 @@ app.use((err, req, res, _next) => {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   adminToken();
+  await seedLessons().catch((err) => console.error('example lessons:', err.message));
   await ensureDemoCertificate();
   warmUpSpeechModel(); // in the background: download the speech model if the speech server does not have it yet
   app.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));

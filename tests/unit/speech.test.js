@@ -101,3 +101,13 @@ printf 'WEBVTT\\n\\n00:00:00.000 --> 00:00:01.000\\nHi.\\n' > "$out.vtt"
     delete process.env.WHISPER_MODEL;
   }
 });
+
+test('silence markers are dropped; meaningful sounds stay', async () => {
+  const { dropSilence } = await import('../../api/speech.js');
+  const vtt = 'WEBVTT\n\n00:00:00.000 --> 00:00:10.000\n [BLANK_AUDIO]\n\n00:00:10.000 --> 00:00:12.000\n[Music]\n\n00:00:12.000 --> 00:00:15.000\nHello.\n';
+  const out = dropSilence(vtt);
+  assert.ok(!out.includes('BLANK_AUDIO'));
+  assert.match(out, /\[Music\]/);
+  assert.match(out, /Hello\./);
+  assert.equal(dropSilence('WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHi.\n'), 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHi.\n', 'unchanged when nothing to drop');
+});
