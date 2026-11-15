@@ -15,7 +15,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
-import { isValidVtt } from './vtt.js';
+import { isValidVtt, parseVtt, toVtt } from './vtt.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = () => path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -130,6 +130,13 @@ async function transcribeRemote(mediaFile, lang, work) {
  * Captions (WebVTT) from the speech in a media file. Throws with code 'no_speech_model' or 'speech_model_loading'
  * when there is none yet, 'speech_model_error' when it fails. Used for editor drafts and for new uploads.
  */
+/** whisper.cpp marks silence as [BLANK_AUDIO]: a caption that says nothing to a Deaf learner. Sounds like [Music] stay. */
+export function dropSilence(vtt) {
+  const cues = parseVtt(vtt);
+  const kept = cues.filter((c) => !/^\s*[[(]\s*(BLANK_AUDIO|silence)\s*[\])]\s*$/i.test(c.text));
+  return kept.length === cues.length ? vtt : toVtt(kept);
+}
+
 // One at a time: on small servers (Render's free plan has 512 MB) two transcriptions at once could run out of memory.
 let queue = Promise.resolve();
 export function transcribe(mediaFile, lang) {
@@ -146,7 +153,7 @@ async function transcribeNow(mediaFile, lang) {
   try {
     let { vtt, model } = mode === 'local' ? await transcribeLocal(mediaFile, lang, work) : await transcribeRemote(mediaFile, lang, work);
     if (!isValidVtt(vtt)) vtt = `WEBVTT\n\n${vtt}`;
-    return { vtt: vtt.replace(/\r\n?/g, '\n'), model };
+    return { vtt: dropSilence(vtt.replace(/\r\n?/g, '\n')), model };
   } catch (err) {
     if (mode === 'local' && !err.code) err.code = 'speech_model_error';
     throw err;
