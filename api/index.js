@@ -100,7 +100,8 @@ function publicLesson(req, m) {
   };
 }
 
-api.get('/health', (_req, res) => res.json({ ok: true }));
+// version: the deployed commit (Render sets RENDER_GIT_COMMIT), so anyone can see which code is live.
+api.get('/health', (_req, res) => res.json({ ok: true, ...(process.env.RENDER_GIT_COMMIT ? { version: process.env.RENDER_GIT_COMMIT.slice(0, 7) } : {}) }));
 
 api.get('/lessons', async (req, res) => {
   const ids = (await readdir(LESSONS_DIR, { withFileTypes: true }).catch(() => []))
