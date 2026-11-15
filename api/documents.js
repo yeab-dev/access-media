@@ -25,9 +25,9 @@ export function chromiumPath() {
   return process.env.CHROMIUM_PATH || ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome'].find(existsSync) || null;
 }
 
-function run(cmd, args, timeoutMs = 60_000) {
+function run(cmd, args, timeoutMs = 60_000, env = process.env) {
   return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    const p = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'], env });
     let err = '';
     const timer = setTimeout(() => { p.kill('SIGKILL'); reject(new Error(`${cmd} took too long`)); }, timeoutMs);
     p.stderr.on('data', (d) => { err += d; });
@@ -160,7 +160,9 @@ async function build(dir, lang, wantPdf) {
       // no crash reporter, and everything Chromium writes stays in the throwaway profile.
       await run(chrome, ['--headless', '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage', '--disable-crash-reporter',
         '--no-first-run', `--crash-dumps-dir=${profile}`, `--user-data-dir=${profile}`, '--no-pdf-header-footer',
-        '--generate-pdf-document-outline', `--print-to-pdf=${pdf}.tmp`, pathToFileURL(html).href]);
+        '--generate-pdf-document-outline', `--print-to-pdf=${pdf}.tmp`, pathToFileURL(html).href],
+        // Chromium crashes if its home folder is not writable (as in some containers): give it the throwaway profile.
+        60_000, { ...process.env, HOME: profile, XDG_CONFIG_HOME: profile, XDG_CACHE_HOME: profile });
       await rename(`${pdf}.tmp`, pdf);
     } finally {
       await rm(profile, { recursive: true, force: true });

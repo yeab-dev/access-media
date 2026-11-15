@@ -5,6 +5,8 @@ set -e
 if [ "$(id -u)" = 0 ]; then
   mkdir -p /data
   [ "$(stat -c %U /data)" = node ] || chown -R node:node /data
+  # setpriv keeps the environment: give "node" its own home (Chromium crashes with an unwritable HOME=/root).
+  export HOME=/home/node USER=node LOGNAME=node
   exec setpriv --reuid=node --regid=node --init-groups "$0" "$@"
 fi
 # First start: build the demo lesson's media into /data.
