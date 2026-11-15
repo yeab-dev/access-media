@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseVtt, formatClock, escapeHtml } from './vtt.js';
+import { publicOrigin } from './origin.js';
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SELF = fileURLToPath(import.meta.url);
@@ -155,7 +156,10 @@ async function build(dir, lang, wantPdf) {
     const profile = await mkdtemp(path.join(tmpdir(), 'db-pdf-'));
     try {
       // Chromium writes a tagged PDF (headings, figures with alt text, reading order) and a bookmark outline.
-      await run(chrome, ['--headless', '--disable-gpu', '--no-sandbox', `--user-data-dir=${profile}`, '--no-pdf-header-footer',
+      // In containers: --disable-dev-shm-usage (Docker's /dev/shm is tiny and Chromium crashes when it fills),
+      // no crash reporter, and everything Chromium writes stays in the throwaway profile.
+      await run(chrome, ['--headless', '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage', '--disable-crash-reporter',
+        '--no-first-run', `--crash-dumps-dir=${profile}`, `--user-data-dir=${profile}`, '--no-pdf-header-footer',
         '--generate-pdf-document-outline', `--print-to-pdf=${pdf}.tmp`, pathToFileURL(html).href]);
       await rename(`${pdf}.tmp`, pdf);
     } finally {
@@ -185,6 +189,10 @@ export function documentsRouter({ lessonsDir }) {
       if (err.code === 'ENOENT') return res.status(404).json({ error: 'not_found', message: 'There is no lesson with this id.' });
       if (err.code === 'NO_LANG') return res.status(404).json({ error: 'no_document', message: `This lesson has no captions in "${lang}", so there is no document in that language.` });
       if (err.code === 'NO_CHROMIUM') return res.status(503).json({ error: 'no_pdf', message: 'PDF is not available on this server (Chromium is not installed). The HTML version is.' });
+      if (format === 'pdf') {
+        console.error(`document: PDF for ${id} (${lang}) failed:`, err.message); // the full Chromium error, for the server log
+        return res.status(503).json({ error: 'pdf_failed', message: `The PDF could not be made just now. The web page version works: ${publicOrigin(req)}/api/v1/lessons/${id}/document?lang=${lang}` });
+      }
       next(err);
     }
   });

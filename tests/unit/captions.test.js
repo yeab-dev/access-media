@@ -90,3 +90,14 @@ test('draft: sends 16 kHz audio to the configured speech model and returns its V
   const wer = wordErrorRate('Welcome. In this lesson you will learn how to write a CV.', 'welcome in this lesson you will learn how to right a cv');
   assert.ok(wer > 0 && wer < 0.2);
 });
+
+test('draft: a speech model that cannot be reached is said in words, not a server error', async () => {
+  process.env.ASR_URL = 'no-such-speech-service.invalid:8000'; // host:port, as Render gives it; the name does not exist
+  try {
+    const res = await fetch(`${base}/lessons/demo/captions/draft`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer unit-test-code' }, body: JSON.stringify({ lang: 'en' }) });
+    assert.equal(res.status, 502);
+    assert.match((await res.json()).message, /could not be reached/);
+  } finally {
+    delete process.env.ASR_URL;
+  }
+});
