@@ -71,6 +71,8 @@ curl -fsSL https://raw.githubusercontent.com/yeab-dev/access-media/main/scripts/
 ```
 [`scripts/server-setup.sh`](scripts/server-setup.sh) installs Docker, opens the firewall, makes `.env` with a new master key, and starts the app behind Caddy with a free Let's Encrypt certificate at `https://<ip-with-dashes>.sslip.io` (no domain to buy). Uses the better `small` speech model.
 
+**Render free plan (what the live demo uses):** a Docker web service with these environment variables: `ADMIN_TOKEN`, `TRUST_PROXY=1`, `SIGNUP=open`, and `WHISPER_MODEL=tiny` (512 MB of memory fits only the tiny speech model; captions take a few minutes per lesson). The free plan has **no disk and sleeps after 15 minutes idle**: each restart starts again from the demo lesson, so keys and uploaded lessons do not last. Fine for trying it; use a paid plan with a disk, or a free server with `scripts/server-setup.sh`, to keep data.
+
 **Hosted on Render (paid):** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app with a 10 GB disk; the master key is generated for you (Environment → `ADMIN_TOKEN`). Then add the example lesson used by the Debo site: `SERVER=https://<your-app>.onrender.com KEY=<master key> ./scripts/add-example-lesson.sh`.
 
 Without Docker (Node 22+, ffmpeg; Chromium for PDFs):

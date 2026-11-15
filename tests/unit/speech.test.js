@@ -82,3 +82,22 @@ test('English-only models are not told a language; WHISPER_MODEL=off turns it of
   delete process.env.WHISPER_MODEL;
   delete process.env.WHISPER_CLI;
 });
+
+test('transcriptions run one at a time (small servers)', async () => {
+  const slow = path.join(dir, 'slow-cli');
+  await writeFile(slow, `#!/bin/sh
+echo start >> "${dir}/order.txt"; sleep 0.3; echo end >> "${dir}/order.txt"
+while [ $# -gt 0 ]; do [ "$1" = "-of" ] && out="$2"; shift; done
+printf 'WEBVTT\\n\\n00:00:00.000 --> 00:00:01.000\\nHi.\\n' > "$out.vtt"
+`);
+  await chmod(slow, 0o755);
+  process.env.WHISPER_CLI = slow;
+  process.env.WHISPER_MODEL = 'tiny';
+  try {
+    await Promise.all([transcribe(MEDIA, 'en'), transcribe(MEDIA, 'en')]);
+    assert.deepEqual((await readFile(path.join(dir, 'order.txt'), 'utf8')).trim().split('\n'), ['start', 'end', 'start', 'end']);
+  } finally {
+    delete process.env.WHISPER_CLI;
+    delete process.env.WHISPER_MODEL;
+  }
+});

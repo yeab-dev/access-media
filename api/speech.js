@@ -2,6 +2,7 @@
 //  1. In this server (default): whisper.cpp ("whisper-cli") with a Whisper model file in DATA_DIR/models.
 //     No extra service and no extra cost; lesson audio never leaves the server.
 //     WHISPER_MODEL: tiny | base (default) | small | … (multilingual; "*.en" models are English only); "off" to disable.
+//     On Render's free plan (512 MB, 0.1 CPU) use tiny. Transcriptions run one at a time.
 //  2. A separate speech server with the OpenAI-style /v1/audio/transcriptions endpoint (e.g. faster-whisper):
 //     set ASR_URL (a URL, or host:port as Render gives for private services) and ASR_MODEL.
 // Drafts are always marked automatic until a person checks them.
@@ -129,7 +130,15 @@ async function transcribeRemote(mediaFile, lang, work) {
  * Captions (WebVTT) from the speech in a media file. Throws with code 'no_speech_model' or 'speech_model_loading'
  * when there is none yet, 'speech_model_error' when it fails. Used for editor drafts and for new uploads.
  */
-export async function transcribe(mediaFile, lang) {
+// One at a time: on small servers (Render's free plan has 512 MB) two transcriptions at once could run out of memory.
+let queue = Promise.resolve();
+export function transcribe(mediaFile, lang) {
+  const turn = queue.then(() => transcribeNow(mediaFile, lang));
+  queue = turn.catch(() => {});
+  return turn;
+}
+
+async function transcribeNow(mediaFile, lang) {
   const mode = speechMode();
   if (mode === 'loading') throw Object.assign(new Error('The speech model is still downloading. Try again in a few minutes.'), { code: 'speech_model_loading' });
   if (!mode) throw Object.assign(new Error('No speech model is set up.'), { code: 'no_speech_model' });
