@@ -50,8 +50,7 @@
   "sign": {
     "src": "lesson.ethsl.mp4",
     "lang": "sgn-et",
-    "label": "Ethiopian Sign Language",
-    "placeholder": true
+    "label": "Ethiopian Sign Language"
   },
   "images": "images.json",
   "titles": {
