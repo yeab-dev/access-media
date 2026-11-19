@@ -29,10 +29,20 @@ ffmpeg -y -loglevel error -i "$OUT/lesson.mp4" \
 ffmpeg -y -loglevel error -i "$OUT/lesson.mp4" -vn -c:a libmp3lame -b:a 32k -ac 1 "$OUT/lesson.mp3"
 ffmpeg -y -loglevel error -ss 1 -i "$OUT/lesson.mp4" -frames:v 1 -q:v 5 "$OUT/poster.jpg"
 
-# Placeholder sign language video with the same timecode. Replace with a real ESL interpreter recording.
-ffmpeg -y -loglevel error \
-  -f lavfi -i "color=c=0x2b2b2b:s=270x360:r=25:d=30" \
-  -vf "drawtext=fontfile=${FONT}:text='ESL interpreter':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=h/2-40,drawtext=fontfile=${FONT}:text='(placeholder)':fontcolor=white@0.7:fontsize=18:x=(w-text_w)/2:y=h/2-8,drawtext=fontfile=${FONT}:text='%{pts\\:hms}':fontcolor=yellow:fontsize=26:x=(w-text_w)/2:y=h/2+30" \
-  -c:v libx264 -profile:v baseline -g 50 -b:v 120k -pix_fmt yuv420p -an -movflags +faststart "$OUT/lesson.ethsl.mp4"
+# Sign language video. A real Ethiopian Sign Language recording, if the repo has one
+# (demo/data/lessons/demo/lesson.ethsl.mp4, copied above), is kept as it is.
+# Otherwise a placeholder with the same timecode is made, and the manifest says so.
+if [ -f demo/data/lessons/demo/lesson.ethsl.mp4 ]; then
+  echo "Using the recorded sign language video"
+else
+  ffmpeg -y -loglevel error \
+    -f lavfi -i "color=c=0x2b2b2b:s=270x360:r=25:d=30" \
+    -vf "drawtext=fontfile=${FONT}:text='ESL interpreter':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=h/2-40,drawtext=fontfile=${FONT}:text='(placeholder)':fontcolor=white@0.7:fontsize=18:x=(w-text_w)/2:y=h/2-8,drawtext=fontfile=${FONT}:text='%{pts\\:hms}':fontcolor=yellow:fontsize=26:x=(w-text_w)/2:y=h/2+30" \
+    -c:v libx264 -profile:v baseline -g 50 -b:v 120k -pix_fmt yuv420p -an -movflags +faststart "$OUT/lesson.ethsl.mp4"
+  node -e '
+    const fs = require("fs"), f = process.argv[1], m = JSON.parse(fs.readFileSync(f, "utf8"));
+    if (m.sign) { m.sign.placeholder = true; fs.writeFileSync(f, JSON.stringify(m, null, 2) + "\n"); }
+  ' "$OUT/manifest.json"
+fi
 
 echo "Demo lesson ready in $OUT"

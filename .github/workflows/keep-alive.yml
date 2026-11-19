@@ -1,0 +1,18 @@
+# Keeps the free Render service awake: it sleeps after ~15 minutes without visits
+# and then takes about a minute to wake. Calls the health check every 10 minutes.
+# GitHub may run scheduled jobs a few minutes late; open the site before a demo anyway.
+# Set the repository variable LIVE_URL to change the address (Settings → Variables).
+name: Keep the live site awake
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the health check
+        env:
+          LIVE_URL: ${{ vars.LIVE_URL || 'https://access-media-rsi0.onrender.com' }}
+        run: curl --fail --silent --show-error --max-time 120 --retry 2 "$LIVE_URL/api/v1/health"
