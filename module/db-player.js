@@ -176,6 +176,7 @@ dialog.help dd { margin: 0; }
 .sign-tools button[aria-pressed=true] { border-color: var(--ap-accent); background: var(--ap-panel); font-weight: 600; }
 .note { margin: 0; padding: 0.5rem 0.75rem; background: var(--ap-panel); border-top: 1px solid var(--ap-line); }
 .note:empty { display: none; }
+.credit { margin: 0; padding: 0.4rem 0.75rem; font-size: 0.85em; color: var(--ap-muted); }
 .ctl .size { font-size: 0.7rem; color: var(--ap-muted); }
 .media { position: relative; background: #000; }
 .sign { position: absolute; z-index: 2; left: 0; top: 0; width: 28%; aspect-ratio: var(--sign-ratio, 3 / 4);
@@ -504,6 +505,7 @@ class DbPlayer extends HTMLElement {
       <li><a class="doc-pdf" href="${escapeAttr(m.document)}?lang=${this.uiLang}&amp;format=pdf">${t.docPdf}</a></li>
     </ul>` : ''}
   </section>
+  ${m.credit ? `<p class="credit" lang="${escapeAttr(m.creditLang || 'en')}">${escapeHtml(m.credit)}</p>` : ''}
   <dialog class="help" aria-labelledby="ap-help-h">
     <h2 id="ap-help-h">${t.keyboardHelp}</h2>
     <dl>${t.keys.map(([k, d]) => `<dt><kbd>${escapeHtml(k)}</kbd></dt><dd>${escapeHtml(d)}</dd>`).join('')}</dl>

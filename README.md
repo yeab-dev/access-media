@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/yeab-dev/access-media/main/scripts/
 
 **Render free plan (what the live demo uses):** a Docker web service with these environment variables: `ADMIN_TOKEN`, `TRUST_PROXY=1`, `SIGNUP=open`, and `WHISPER_MODEL=tiny` (512 MB of memory fits only the tiny speech model; captions take a few minutes per lesson). The free plan has **no disk and sleeps after 15 minutes idle**: each restart starts again from the demo lesson, so keys and uploaded lessons do not last. Fine for trying it; use a paid plan with a disk, or a free server with `scripts/server-setup.sh`, to keep data.
 
-**Hosted on Render (paid):** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app with a 10 GB disk; the master key is generated for you (Environment → `ADMIN_TOKEN`). The Debo site's second lesson, “Creativity at work”, ships with the app (`demo/data/lessons/creativity-at-work`, video CC BY-SA 3.0 by the simpleshow foundation) and is added at every start when missing; its English captions are an automatic draft, labelled as such.
+**Hosted on Render (paid):** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app with a 10 GB disk; the master key is generated for you (Environment → `ADMIN_TOKEN`). The Debo site's second lesson, “Creativity at work”, ships with the app (`demo/data/lessons/creativity-at-work`, video CC BY-SA 3.0 by the simpleshow foundation) and is added at every start when missing; its English captions are an automatic draft, labelled as such. The Savanna page's lesson, “Greetings in Ethiopian Sign Language” (`demo/data/lessons/ethsl-greetings`, 4 MB), ships and is added the same way.
 
 Without Docker (Node 22+, ffmpeg; Chromium for PDFs):
 
@@ -226,8 +226,8 @@ Drafts come from an open speech model running inside the server (whisper.cpp wit
 **Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, lesson upload with automatic captions, provider keys from a web page (each provider changes only its own things), API documentation with a guide and "Try it out", Render hosting, the API with documentation and a webhook, Docker. 56 unit tests and 78 browser tests, with axe-core showing zero critical or serious issues on every page we built.
 
 **Not finished:**
-- The **sign language video is a placeholder**. A real ESL recording is needed: use `/studio/sign.html` with an interpreter.
-- The **demo lesson has no speech** (placeholder slides).
+- **Real Ethiopian Sign Language is in one lesson only.** The lesson on the Savanna page, “Greetings in Ethiopian Sign Language” (`demo/data/lessons/ethsl-greetings`), uses a real signer: “Learn Ethiopian Sign Language: Important Phrases” by Visions Global Empowerment, signed by a student of Yekatit 23 School, Bahir Dar (Bahir Dar signs; other regions may differ), **used with permission** and credited under the player. It is rebuilt with `node scripts/make-ethsl-lesson.mjs source.mp4`. The “How to write a CV” lesson still has a **placeholder** sign video; record one with `/studio/sign.html` and an interpreter.
+- The **CV demo lesson has no speech** (placeholder slides).
 - **Native-speaker review** of all Amharic.
 - **Service-worker offline**, **Braille (.brf)**, the **recorded live-session viewer**, and **LTI 1.3**.
 - `docker compose up` **has not yet been tested on another laptop**.

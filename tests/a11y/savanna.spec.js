@@ -16,7 +16,13 @@ test('player works inside the Savanna concept page (Level 1 script tag)', async 
 
   await chooseCaptions(player, { label: 'English' });
   await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
-  await expect(player.locator('.cc-text:not(.sample)')).toContainText('A CV is a short document');
+  await expect(player.locator('.cc-text:not(.sample)')).toContainText('My name is Fentanesh');
+
+  // A real Ethiopian Sign Language video (not the placeholder), and the source is credited.
+  await player.getByRole('button', { name: 'Sign language', exact: true }).click();
+  await expect(player.getByRole('group', { name: 'Sign language window' })).toBeVisible();
+  expect(await player.locator('video.sign-video').evaluate((v) => v.currentSrc || v.src)).toMatch(/ethsl-greetings\/lesson\.ethsl\.mp4$/);
+  await expect(player.locator('.credit')).toContainText('Visions Global Empowerment');
 
   // Savanna's own page has issues we don't own; check our component only.
   const results = await new AxeBuilder({ page }).include('db-player')
