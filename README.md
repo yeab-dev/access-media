@@ -19,8 +19,8 @@ Around it: a recording studio for sign language interpreters, a caption editor, 
 | [Home for lesson providers](https://access-media-rsi0.onrender.com/) | what you can do, in three steps |
 | [Get your key](https://access-media-rsi0.onrender.com/get-key) | an API key and a practice lesson in ten seconds |
 | [Documentation](https://access-media-rsi0.onrender.com/docs) | step-by-step guide and every call with "Try it out" |
-| [Debo Learning](https://access-media-rsi0.onrender.com/debo/) | a made-up lesson provider's site using the player |
-| [Player on a blank page](https://access-media-rsi0.onrender.com/demo/blank.html) · [inside Savanna](https://access-media-rsi0.onrender.com/savanna/pages/concept-with-navigation.html) | Level 1 install |
+| [Example site: Savanna](https://access-media-rsi0.onrender.com/savanna/pages/concept-with-navigation.html) · [jobs](https://access-media-rsi0.onrender.com/savanna/pages/jobs.html) | the player and job cards inside the ALX learning platform (Level 1 install) |
+| [Player on a blank page](https://access-media-rsi0.onrender.com/demo/blank.html) | no other styles |
 
 ## For lesson providers: start here
 
@@ -52,9 +52,8 @@ Open **http://localhost:8080**.
 | `/` | For lesson providers: what you can do, in three steps |
 | `/get-key` | Get your API key (organisation name only) |
 | `/docs` | Documentation: a step-by-step guide and every call with "Try it out" |
-| `/debo/` | Debo Learning, a made-up lesson provider's website that uses the player |
 | `/demo/blank.html` | The player on an empty page: no Bootstrap, no Savanna CSS, attributes only |
-| `/savanna/pages/concept-with-navigation.html` | Inside Savanna, under the lesson banner |
+| `/savanna/pages/concept-with-navigation.html` | The example site: inside Savanna, under the lesson banner |
 | `/savanna/pages/jobs.html` | Career gateway: job cards and "share your certificate" |
 | `/certificates/demo-learner` | The page an employer opens to check a certificate |
 | `/studio/lessons.html` | Add a lesson: upload a video, get automatic captions and the code for your page (staff) |
@@ -71,7 +70,7 @@ curl -fsSL https://raw.githubusercontent.com/yeab-dev/access-media/main/scripts/
 
 **Render free plan (what the live demo uses):** a Docker web service with these environment variables: `ADMIN_TOKEN`, `TRUST_PROXY=1`, `SIGNUP=open`, and `WHISPER_MODEL=tiny` (512 MB of memory fits only the tiny speech model; captions take a few minutes per lesson). The free plan has **no disk and sleeps after 15 minutes idle**: each restart starts again from the demo lesson, so keys and uploaded lessons do not last. Fine for trying it; use a paid plan with a disk, or a free server with `scripts/server-setup.sh`, to keep data.
 
-**Hosted on Render (paid):** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app with a 10 GB disk; the master key is generated for you (Environment → `ADMIN_TOKEN`). The Debo site's second lesson, “Creativity at work”, ships with the app (`demo/data/lessons/creativity-at-work`, video CC BY-SA 3.0 by the simpleshow foundation) and is added at every start when missing; its English captions are an automatic draft, labelled as such. The Savanna page's lesson, “Greetings in Ethiopian Sign Language” (`demo/data/lessons/ethsl-greetings`, 4 MB), ships and is added the same way.
+**Hosted on Render (paid):** Dashboard → New → **Blueprint** → choose this repository → Apply. [`render.yaml`](render.yaml) creates the app with a 10 GB disk; the master key is generated for you (Environment → `ADMIN_TOKEN`). The example lesson “Creativity at work” ships with the app (`demo/data/lessons/creativity-at-work`, video CC BY-SA 3.0 by the simpleshow foundation) and is added at every start when missing; its English captions are an automatic draft, labelled as such. The Savanna page's lesson, “Greetings in Ethiopian Sign Language” (`demo/data/lessons/ethsl-greetings`, 4 MB), ships and is added the same way.
 
 Without Docker (Node 22+, ffmpeg; Chromium for PDFs):
 

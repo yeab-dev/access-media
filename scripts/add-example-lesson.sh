@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Adds the example lesson "Creativity at work" (used by the Debo example site) to a server, through the API,
+# Adds the example lesson "Creativity at work" to a server, through the API,
 # the same way any lesson provider adds a lesson.
 #   SERVER=https://your-server KEY=<master key or provider key> ./scripts/add-example-lesson.sh
 # Video: "Creativity in the Workplace" by the simpleshow foundation, CC BY-SA 3.0, from Wikimedia Commons.
