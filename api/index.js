@@ -51,8 +51,8 @@ const portal = (file) => (_req, res) => res.set('Cache-Control', 'no-cache').sen
 app.get('/', portal('index.html'));
 app.get('/get-key', portal('get-key.html'));
 app.use('/portal', express.static(path.join(ROOT, 'portal'), revalidate));
-// The example lesson provider's website (made-up company), embedding the player like any outside site would.
-app.use('/debo', express.static(path.join(ROOT, 'provider-site'), revalidate));
+// The example site is the Savanna page; old links to the removed Debo example site go there.
+app.use('/debo', (_req, res) => res.redirect(301, '/savanna/pages/concept-with-navigation.html'));
 
 // Level 2 documentation: the OpenAPI file, and Swagger UI at /docs so a judge can try calls in the browser.
 // The examples say https://THIS-SERVER: fill in this server's real address, so copied code works as it is.

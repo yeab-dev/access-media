@@ -42,7 +42,6 @@ COPY studio ./studio
 COPY savanna ./savanna
 COPY scripts ./scripts
 COPY portal ./portal
-COPY provider-site ./provider-site
 COPY openapi.yaml ./
 
 RUN mkdir -p /data && chown -R node:node /data

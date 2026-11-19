@@ -51,9 +51,9 @@ test('get a key, then the docs and the studio already use it', async ({ page }) 
   expect(options).toEqual([practice]);
 });
 
-test('Debo lesson 2 (an example lesson that ships with the app) plays, with its automatic captions labelled', async ({ page }) => {
-  await page.goto('/debo/lessons/creativity-at-work.html');
-  await page.evaluate(() => localStorage.clear());
+test('the example lesson that ships with the app plays, with its automatic captions labelled', async ({ page }) => {
+  await page.goto('/demo/');
+  await page.evaluate(() => { localStorage.clear(); document.querySelector('db-player').setAttribute('lesson', 'creativity-at-work'); });
   const player = page.locator('db-player');
   await expect(player.getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 20000 });
   await player.getByRole('button', { name: 'Captions' }).click();
@@ -61,4 +61,10 @@ test('Debo lesson 2 (an example lesson that ships with the app) plays, with its 
   await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
   await expect(player.locator('.cc-text:not(.sample)')).toContainText('Sean');
   await axe(page);
+});
+
+test('old links to the removed Debo example site go to the Savanna page', async ({ page }) => {
+  test.skip(test.info().project.name === 'android', 'same on every device');
+  await page.goto('/debo/lessons/creativity-at-work.html');
+  expect(new URL(page.url()).pathname).toBe('/savanna/pages/concept-with-navigation.html');
 });
