@@ -135,7 +135,7 @@ Done:
 - Dev server: run plainly (`npm start` with `PORT=8082`); `node --watch` here left orphan servers serving old code — restart by hand after changes.
 - Config: `.env` (gitignored; `ADMIN_TOKEN`, `PORT`, `DATA_DIR`), `.env.example` committed. `npm run dev`/`start` load `.env`.
 - Browser tests run against a throwaway copy of the data (`.test-data/`, plus a `studio-test` lesson) with `ADMIN_TOKEN=test-code`; the studio test uses Chromium's fake camera.
-- Tests: 56 unit + 78 browser (desktop + Pixel 7), axe clean incl. blank page, Savanna mount and studio.
+- Tests: 56 unit + 83 browser (desktop + Pixel 7), axe clean incl. blank page, Savanna mount and studio.
 
 - **Submission package:** `Dockerfile` (node:24-bookworm-slim + ffmpeg + chromium + fonts-noto-core/dejavu; builds demo media into /data on first start) and `docker-compose.yml` (`web` on 8080, volume `lessons`, `.env`; optional `asr` profile = speaches faster-whisper) — **not yet run** (no Docker in the dev session); `openapi.yaml` + Swagger UI at `/docs`; webhooks (`api/webhooks.js`, `api/events.js`: sign.recorded, sign.requested, captions.updated, certificate.issued; HMAC `X-DB-Signature`; no learner names); `compression` middleware (player 62 → 18.7 KB); `scripts/measure-3g.mjs` (Slow 3G: player usable 9.0 s, 24 KB); `README.md` (guide's outline; TODO team/co-designer names, licence); `CONFORMANCE.md` (WCAG 2.2 A/AA table; co-designer rows TODO).
 - **Lesson upload + automatic captions** (`api/lessons.js`, `studio/lessons.html`): `POST /api/v1/lessons` (staff, multipart `video`, `title`, `lang`, optional `id`) → 202 at once; background: ffprobe check, ffmpeg 360p/240p/mp3/poster (same files as make-demo), then if `ASR_URL` set `transcribe()` (shared with the editor draft, in `api/captions.js`) → `lesson.<lang>.vtt` track with `auto: true, reviewed: false`. Manifest `status` processing → captioning → ready | failed, `statusMessage` in words; unfinished uploads marked failed at start. Webhook `lesson.ready`. Player labels auto tracks "{language} (automatic)" + visible note "may have mistakes"; says "still being prepared" for processing lessons. Saving in the editor clears `auto`. Editor accepts `?lesson=`.
@@ -147,7 +147,7 @@ Done:
 - **Debo example site removed** (provider-site/ deleted); the example site is the Savanna page. `/debo/*` redirects 301 to the Savanna concept page; portal nav "Example site" points there.
 - **Job card audio:** "Listen to summary" plays `job[lang].audio` (recorded; API makes it absolute) else speechSynthesis, after waiting ≤1.5 s for late-loading voices (Chrome). `scripts/add-job-audio.sh <job-id> <en|am> <file>` → `demo/data/jobs-audio/<id>.<lang>.mp3` + jobs.json. No recordings committed yet (team to record; Amharic needs them).
 - Keep-alive: `.github/workflows/keep-alive.yml` pings `/api/v1/health` every 10 min (repo var `LIVE_URL`).
-- Not done: service-worker offline, Braille, live-session viewer, LTI 1.3; real ESL recording; native Amharic review; docker compose test on another laptop.
+- Not done: service-worker offline, Braille, live-session viewer, LTI 1.3; real ESL recording; docker compose test on another laptop.
 
 ## Commands
 

@@ -176,7 +176,7 @@ curl -X DELETE $B/webhooks/<id> -H "$T"
 
 Interface text is in `module/i18n/en.json` and `am.json`. **Adding a language is one new file** (for example `om.json`); missing strings fall back to English. Caption, description and document languages come from the lesson's files. Add one with the caption editor or `POST /captions`. Dates are shown in the Ethiopian and Gregorian calendars. Amharic gets more line height and is never italicised.
 
-_The Amharic in this repo is a draft and must be checked by a native speaker._
+_The Amharic was reviewed by a native speaker._
 
 ## Offline and slow connection
 
@@ -222,12 +222,11 @@ Drafts come from an open speech model running inside the server (whisper.cpp wit
 
 ## Finished and not finished
 
-**Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, lesson upload with automatic captions, provider keys from a web page (each provider changes only its own things), API documentation with a guide and "Try it out", Render hosting, the API with documentation and a webhook, Docker. 56 unit tests and 78 browser tests, with axe-core showing zero critical or serious issues on every page we built.
+**Finished:** the player with every must-have from the brief (keyboard and screen reader; EN/AM captions you can resize and recolour; movable, resizable sign window; audio description; offline pack; tagged PDF and HTML with image descriptions), the career gateway (job card with audio summary, verifiable certificate page), the sign language recording studio, the caption editor, lesson upload with automatic captions, provider keys from a web page (each provider changes only its own things), API documentation with a guide and "Try it out", Render hosting, the API with documentation and a webhook, Docker. 56 unit tests and 83 browser tests, with axe-core showing zero critical or serious issues on every page we built.
 
 **Not finished:**
 - **Real Ethiopian Sign Language is in one lesson only.** The lesson on the Savanna page, “Greetings in Ethiopian Sign Language” (`demo/data/lessons/ethsl-greetings`), uses a real signer: “Learn Ethiopian Sign Language: Important Phrases” by Visions Global Empowerment, signed by a student of Yekatit 23 School, Bahir Dar (Bahir Dar signs; other regions may differ), **used with permission** and credited under the player. It is rebuilt with `node scripts/make-ethsl-lesson.mjs source.mp4`. The “How to write a CV” lesson still has a **placeholder** sign video; record one with `/studio/sign.html` and an interpreter.
 - The **CV demo lesson has no speech** (placeholder slides).
-- **Native-speaker review** of all Amharic.
 - **Service-worker offline**, **Braille (.brf)**, the **recorded live-session viewer**, and **LTI 1.3**.
 - `docker compose up` **has not yet been tested on another laptop**.
 - **Large uploads on slow connections:** on the hosted demo, an upload is cut after about 75 seconds (we measured about 7 MB at 90 KB/s from Addis Ababa). Upload a smaller file (for example 360p) or from a faster connection. Resumable uploads are not built.
