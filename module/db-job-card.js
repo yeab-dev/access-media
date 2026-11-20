@@ -17,6 +17,16 @@ import { loadStrings, preferredLanguage, setPreferredLanguage, languageName, bot
 const scriptOrigin = new URL(import.meta.url).origin;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+// Chrome fills the voice list a moment after the page loads: wait for it (briefly) before saying there is none.
+function voicesReady(ms = 1500) {
+  if (!('speechSynthesis' in window) || speechSynthesis.getVoices().length) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => { clearTimeout(timer); speechSynthesis.removeEventListener?.('voiceschanged', done); resolve(); };
+    const timer = setTimeout(done, ms);
+    speechSynthesis.addEventListener?.('voiceschanged', done);
+  });
+}
+
 function hasVoice(lang) {
   if (!('speechSynthesis' in window)) return false;
   return speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith(lang));
@@ -157,7 +167,7 @@ class DbJobCard extends HTMLElement {
     ].filter(Boolean).join(' ');
   }
 
-  #toggleListening() {
+  async #toggleListening() {
     const btn = this.#root.querySelector('.listen');
     if (btn.getAttribute('aria-pressed') === 'true') { this.#stopListening(); return; }
     const j = this.#job;
@@ -169,6 +179,7 @@ class DbJobCard extends HTMLElement {
 
     // A recorded summary (e.g. an Amharic voice recording) is best; otherwise the phone's own voice.
     const recorded = j[textLang]?.audio;
+    if (!recorded) await voicesReady();
     if (recorded) {
       this.#audio = new Audio(new URL(recorded, this.getAttribute('src') ? new URL(this.getAttribute('src'), document.baseURI) : document.baseURI));
       this.#audio.addEventListener('ended', () => this.#stopListening());

@@ -116,7 +116,7 @@ document.addEventListener('db-player:sign-requested', (e) => e.detail);  // { le
 document.addEventListener('db-player:ready', (e) => e.detail);
 ```
 
-**Career gateway:** `<script type="module" src=".../module/db-job-card.js">`, then `<db-job-card job="junior-frontend">` (or `src="jobs.json"` for a plain file). Events `db-job-card:listen`, `db-job-card:apply`. `<db-language>` is the same language switch for pages without a player.
+**Career gateway:** `<script type="module" src=".../module/db-job-card.js">`, then `<db-job-card job="junior-frontend">` (or `src="jobs.json"` for a plain file). Events `db-job-card:listen`, `db-job-card:apply`. `<db-language>` is the same language switch for pages without a player. **Listen to summary** plays a recorded summary when the job has one (`"audio"` per language), otherwise the device's own voice. Most phones have no Amharic voice, so record one: `scripts/add-job-audio.sh junior-frontend am recording.m4a` makes a small MP3 (32 kbps mono) and adds it to `demo/data/jobs.json`.
 
 **Keyboard** (when focus is in the player): Space or K play/pause · ←/→ 5 s · J/L 10 s · M mute · C captions · D audio description · S sign window · T transcript · F full screen · ? keyboard help. With the sign window selected: arrows move it, + and − resize it. Every drag has a button.
 
