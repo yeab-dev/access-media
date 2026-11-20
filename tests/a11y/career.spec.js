@@ -34,6 +34,7 @@ test('jobs page: job cards in Savanna, axe clean, JobPosting JSON-LD for search 
 
 test('Listen to summary reads the whole card, and Stop stops it', async ({ page }) => {
   await fakeVoice(page);
+  await withoutRecordings(page);
   await page.goto('/savanna/pages/jobs.html');
   const card = page.locator('db-job-card').first();
   const listen = card.getByRole('button', { name: 'Listen to summary' });
@@ -48,6 +49,7 @@ test('Listen to summary reads the whole card, and Stop stops it', async ({ page 
 });
 
 test('no voice for the language: the card says so in words', async ({ page }) => {
+  await withoutRecordings(page);
   await page.addInitScript(() => {
     Object.defineProperty(window, 'speechSynthesis', { value: { getVoices: () => [], cancel() {}, speak() {} } });
   });
@@ -57,8 +59,19 @@ test('no voice for the language: the card says so in words', async ({ page }) =>
   await expect(card.getByRole('status')).toContainText('no voice for this language');
 });
 
+// Leave out recorded summaries, so the phone's own voice is what gets tested.
+async function withoutRecordings(page) {
+  await page.route(/\/api\/v1\/jobs(\/|$|\?)/, async (route) => {
+    const res = await route.fetch();
+    const strip = (j) => { for (const k of ['en', 'am']) if (j[k]) delete j[k].audio; return j; };
+    const body = await res.json();
+    await route.fulfill({ response: res, json: body.jobs ? { ...body, jobs: body.jobs.map(strip) } : strip(body) });
+  });
+}
+
 test('one language switch: the page switch turns every card Amharic, keeps focus, and reads in Amharic', async ({ page }) => {
   await fakeVoice(page);
+  await withoutRecordings(page);
   await page.goto('/savanna/pages/jobs.html');
   const sw = page.locator('db-language').getByLabel('Language / ቋንቋ');
   await sw.selectOption('am');
@@ -70,6 +83,52 @@ test('one language switch: the page switch turns every card Amharic, keeps focus
   const spoken = await page.evaluate(() => window.__spoken[0]);
   expect(spoken.lang).toBe('am-ET');
   expect(spoken.text).toContain('ጀማሪ የድር ገጽ ገንቢ');
+});
+
+test('a recorded summary plays even on a phone with no voice (most have no Amharic voice)', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'speechSynthesis', { value: { getVoices: () => [], cancel() {}, speak() {}, addEventListener() {}, removeEventListener() {} } });
+    window.__played = [];
+    HTMLMediaElement.prototype.play = function () { window.__played.push(this.src); return Promise.resolve(); };
+  });
+  // A job with an Amharic recording, as scripts/add-job-audio.sh makes.
+  await page.route(/\/api\/v1\/jobs\/junior-frontend$/, async (route) => {
+    const res = await route.fetch();
+    const job = await res.json();
+    job.am.audio = new URL('/demo/data/jobs-audio/junior-frontend.am.mp3', page.url()).href;
+    await route.fulfill({ response: res, json: job });
+  });
+  await page.goto('/savanna/pages/jobs.html');
+  await page.locator('db-language').getByLabel('Language / ቋንቋ').selectOption('am');
+  const card = page.locator('db-job-card').first();
+  await card.getByRole('button', { name: 'ማጠቃለያውን አዳምጥ' }).click();
+  await expect(card.locator('.listen')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => window.__played)).toEqual([expect.stringMatching(/\/demo\/data\/jobs-audio\/junior-frontend\.am\.mp3$/)]);
+  await expect(card.locator('.note')).toHaveText('');
+});
+
+test('voices that load a moment late are still used (no false "no voice" message)', async ({ page }) => {
+  await withoutRecordings(page);
+  await page.addInitScript(() => {
+    window.__spoken = [];
+    let voices = [];
+    const listeners = new Set();
+    Object.defineProperty(window, 'speechSynthesis', { value: {
+      getVoices: () => voices,
+      addEventListener: (_t, f) => listeners.add(f), removeEventListener: (_t, f) => listeners.delete(f),
+      cancel() {}, speak(u) { window.__spoken.push(u.text); },
+    } });
+    window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    // Voices arrive after the tap, as in Chrome.
+    window.__loadVoices = () => { voices = [{ lang: 'en-US', name: 'Late English' }]; listeners.forEach((f) => f()); };
+  });
+  await page.goto('/savanna/pages/jobs.html');
+  const card = page.locator('db-job-card').first();
+  await card.getByRole('button', { name: 'Listen to summary' }).click();
+  await page.evaluate(() => setTimeout(window.__loadVoices, 300));
+  await expect(card.locator('.listen')).toHaveAttribute('aria-pressed', 'true');
+  expect((await page.evaluate(() => window.__spoken))[0]).toContain('Junior Front-End Developer');
+  await expect(card.locator('.note')).toHaveText('');
 });
 
 test('job card at 200% zoom: no sideways scrolling, buttons still usable', async ({ page }) => {

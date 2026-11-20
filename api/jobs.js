@@ -87,6 +87,10 @@ export function jobsRouter({ jobsFile, dataDir }) {
   }));
   const shape = (req, job) => {
     const { owner, ...rest } = job;
+    // Recorded summaries ("audio" per language) become full addresses, so cards on other sites can play them.
+    for (const lang of Object.keys(rest)) {
+      if (rest[lang]?.audio) rest[lang] = { ...rest[lang], audio: new URL(rest[lang].audio, publicOrigin(req) + '/').href };
+    }
     return { ...rest, jsonLd: jobPosting(job, publicOrigin(req)) };
   };
   const bad = (res, error, message, status = 400, extra = {}) => res.status(status).json({ error, message, ...extra });
