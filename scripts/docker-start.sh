@@ -9,6 +9,9 @@ if [ "$(id -u)" = 0 ]; then
   export HOME=/home/node USER=node LOGNAME=node
   exec setpriv --reuid=node --regid=node --init-groups "$0" "$@"
 fi
-# First start: build the demo lesson's media into /data.
-[ -f /data/lessons/demo/lesson.mp4 ] || DATA_DIR=/data ./scripts/make-demo.sh
+# Build the demo lesson's media into /data on first start, and again when the repo has a new clip or sign video for it.
+want="$(cat demo/data/lessons/demo/lesson.mp4 demo/data/lessons/demo/lesson.ethsl.mp4 2>/dev/null | sha256sum | cut -c1-64)"
+if [ ! -f /data/lessons/demo/lesson.mp4 ] || { [ -n "$want" ] && [ "$want" != "$(cat /data/lessons/demo/.built-from 2>/dev/null)" ]; }; then
+  DATA_DIR=/data ./scripts/make-demo.sh
+fi
 exec node api/index.js

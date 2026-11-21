@@ -41,6 +41,8 @@ export async function processSignVideo(input, output, offset = 0) {
     '-g', '50', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output]);
 }
 
+const KEEP_ORIGINALS = /^(1|true|yes)$/i.test(process.env.KEEP_SIGN_RECORDINGS || '');
+
 export function signRouter({ lessonsDir, dataDir }) {
   const router = express.Router();
   const upload = multer({ dest: path.join(os.tmpdir(), 'db-sign-uploads'), limits: { fileSize: MAX_UPLOAD, files: 1 } });
@@ -99,7 +101,18 @@ export function signRouter({ lessonsDir, dataDir }) {
         await copyFile(path.join(dir, manifest.sign.src), path.join(dir, `lesson.ethsl.previous.mp4`)).catch(() => {});
       }
       await rename(next, out);
-      manifest.sign = { src: 'lesson.ethsl.mp4', lang: 'sgn-et', label: 'Ethiopian Sign Language', recordedAt: new Date().toISOString(), offset };
+      const recordedAt = new Date().toISOString();
+      // KEEP_SIGN_RECORDINGS=1: also keep the interpreter's original recording (full quality, with sound),
+      // outside the public media folder, so it can be processed again later. Off by default: it holds a voice.
+      if (KEEP_ORIGINALS) {
+        const keep = path.join(dataDir, 'sign-recordings', id);
+        await mkdir(keep, { recursive: true });
+        const ext = /mp4/.test(req.file.mimetype) ? 'mp4' : /quicktime/.test(req.file.mimetype) ? 'mov' : 'webm';
+        const base = path.join(keep, recordedAt.replace(/[:.]/g, '-'));
+        await copyFile(tmp, `${base}.${ext}`);
+        await writeFile(`${base}.json`, JSON.stringify({ lesson: id, recordedAt, offset, file: path.basename(`${base}.${ext}`) }, null, 2));
+      }
+      manifest.sign = { src: 'lesson.ethsl.mp4', lang: 'sgn-et', label: 'Ethiopian Sign Language', recordedAt, offset };
       const mpath = path.join(dir, 'manifest.json');
       await writeFile(`${mpath}.tmp`, JSON.stringify(manifest, null, 2));
       await rename(`${mpath}.tmp`, mpath);

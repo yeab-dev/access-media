@@ -8,7 +8,7 @@ test('caption editor: correct a line, problems explained and linked, save, learn
   await page.getByLabel('Your API key').fill('test-code');
   await page.getByRole('combobox', { name: 'Lesson' }).selectOption('studio-test');
   await page.getByRole('combobox', { name: 'Track' }).selectOption('captions:en');
-  await expect(page.getByRole('status')).toContainText('Loaded 6 lines');
+  await expect(page.getByRole('status')).toContainText('Loaded 9 lines');
 
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations.filter((v) => ['critical', 'serious'].includes(v.impact)).map((v) => v.id)).toEqual([]);
@@ -21,7 +21,7 @@ test('caption editor: correct a line, problems explained and linked, save, learn
   const line1 = page.getByRole('group', { name: 'Line 1' });
   await line1.getByLabel('Words').fill('[music] Welcome! This line was corrected by a person.');
   const line2 = page.getByRole('group', { name: 'Line 2' });
-  await line2.getByLabel('End').fill('0:04.000'); // before its start: a problem
+  await line2.getByLabel('End').fill('0:02.000'); // before its start: a problem
   await expect(line2.getByText('The end time must be after the start time.')).toBeVisible();
   await expect(line2.getByLabel('End')).toHaveAttribute('aria-invalid', 'true');
 
@@ -31,10 +31,10 @@ test('caption editor: correct a line, problems explained and linked, save, learn
   await expect(summary).toBeFocused();
   await summary.getByRole('link', { name: /Line 2: The end time must be after the start time/ }).click();
   await expect(line2.getByLabel('End')).toBeFocused();
-  await line2.getByLabel('End').fill('0:10.000');
+  await line2.getByLabel('End').fill('0:05.000');
 
   await page.getByRole('button', { name: 'Save to the lesson' }).click();
-  await expect(page.getByRole('status')).toContainText('Saved 6 lines');
+  await expect(page.getByRole('status')).toContainText('Saved 9 lines');
 
   // Download works too.
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download the WebVTT file' }).click()]);
@@ -44,7 +44,7 @@ test('caption editor: correct a line, problems explained and linked, save, learn
   await page.goto('/demo/?lesson=studio-test');
   const player = page.locator('db-player');
   await chooseCaptions(player, { label: 'English' });
-  await player.locator('video.main').evaluate((v) => { v.currentTime = 1; });
+  await player.locator('video.main').evaluate((v) => { v.currentTime = 1.5; });
   await expect(player.locator('.cc-text:not(.sample)')).toContainText('corrected by a person');
 });
 
@@ -53,12 +53,12 @@ test('caption editor: add and delete lines by keyboard, focus goes to the right 
   await page.goto('/studio/captions.html');
   await page.getByRole('combobox', { name: 'Lesson' }).selectOption('studio-test');
   await page.getByRole('combobox', { name: 'Track' }).selectOption('captions:am');
-  await expect(page.getByRole('status')).toContainText('Loaded 6 lines');
+  await expect(page.getByRole('status')).toContainText('Loaded 9 lines');
   await page.getByRole('group', { name: 'Line 3' }).getByRole('button', { name: 'Add line after' }).click();
   await expect(page.getByRole('group', { name: 'Line 4' }).getByLabel('Words')).toBeFocused();
   await expect(page.getByRole('group', { name: 'Line 4' }).getByLabel('Words')).toHaveAttribute('lang', 'am');
   await page.getByRole('group', { name: 'Line 4' }).getByRole('button', { name: 'Delete line' }).click();
-  await expect(page.getByRole('group', { name: 'Line 7' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Line 10' })).toHaveCount(0);
   await expect(page.getByRole('status')).toContainText('Line 4 deleted');
 });
 

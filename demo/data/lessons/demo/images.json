@@ -1,35 +1,20 @@
 {
-  "note": "One entry per slide: when it appears, a short title (used as a heading) and a real description of the picture. Amharic is a draft for native-speaker review.",
+  "note": "One entry per scene: when it appears, a short title (used as a heading) and a real description of the picture. Amharic is a draft for native-speaker review.",
   "images": [
     {
       "time": 0.5,
-      "en": { "title": "Introduction", "alt": "Title slide. The words \"How to write a CV\" in large white letters on a dark blue background." },
-      "am": { "title": "መግቢያ", "alt": "የርዕስ ስላይድ። \"How to write a CV\" (ሲቪ እንዴት እንደሚጻፍ) የሚሉ ቃላት በትልቅ ነጭ ፊደል በጥቁር ሰማያዊ ዳራ ላይ።" }
+      "en": { "title": "At the association", "alt": "A girl in a red checked shirt bends over a notebook and writes at a wooden table outdoors. Two people in the same red checked shirts sit behind her." },
+      "am": { "title": "በማኅበሩ ውስጥ", "alt": "ቀይ ዥንጉርጉር ሸሚዝ የለበሰች ልጅ ውጭ ባለ የእንጨት ጠረጴዛ ላይ ጎንበስ ብላ በደብተር ትጽፋለች። ተመሳሳይ ቀይ ዥንጉርጉር ሸሚዝ የለበሱ ሁለት ሰዎች ከኋላዋ ተቀምጠዋል።" }
     },
     {
-      "time": 5,
-      "en": { "title": "What is a CV?", "alt": "Slide with the question \"What is a CV?\" in white letters on dark blue." },
-      "am": { "title": "ሲቪ ምንድን ነው?", "alt": "\"What is a CV?\" (ሲቪ ምንድን ነው?) የሚል ጥያቄ በነጭ ፊደል በጥቁር ሰማያዊ ላይ ያለበት ስላይድ።" }
+      "time": 2,
+      "en": { "title": "Kirubel Anteneh", "alt": "Kirubel Anteneh, a young man with short curly hair and a black and white striped shirt, smiles as he talks. Shelves with brown paper bags are behind him." },
+      "am": { "title": "ኪሩቤል አንተነህ", "alt": "ኪሩቤል አንተነህ፣ አጭር ጠጉራም ጸጉር ያለው እና ጥቁርና ነጭ ባለ መስመር ሸሚዝ የለበሰ ወጣት፣ እየሳቀ ይናገራል። ከኋላው ቡናማ የወረቀት ቦርሳዎች ያሉባቸው መደርደሪያዎች አሉ።" }
     },
     {
-      "time": 10,
-      "en": { "title": "Step 1: Your details", "alt": "Slide: \"1. Name, phone, town\". The first thing on a CV is how to reach you." },
-      "am": { "title": "ደረጃ 1፦ የእርስዎ መረጃ", "alt": "ስላይድ፦ \"1. Name, phone, town\" (ስም፣ ስልክ፣ ከተማ)። በሲቪ ላይ የመጀመሪያው ነገር እርስዎን እንዴት ማግኘት እንደሚቻል ነው።" }
-    },
-    {
-      "time": 15,
-      "en": { "title": "Step 2: Education and training", "alt": "Slide: \"2. Education and training\" in white letters on dark blue." },
-      "am": { "title": "ደረጃ 2፦ ትምህርት እና ስልጠና", "alt": "ስላይድ፦ \"2. Education and training\" (ትምህርት እና ስልጠና) በነጭ ፊደል በጥቁር ሰማያዊ ላይ።" }
-    },
-    {
-      "time": 20,
-      "en": { "title": "Step 3: Work experience", "alt": "Slide: \"3. Work experience\" in white letters on dark blue." },
-      "am": { "title": "ደረጃ 3፦ የሥራ ልምድ", "alt": "ስላይድ፦ \"3. Work experience\" (የሥራ ልምድ) በነጭ ፊደል በጥቁር ሰማያዊ ላይ።" }
-    },
-    {
-      "time": 25,
-      "en": { "title": "Keep it short", "alt": "Slide: \"One or two pages\". A CV should be short." },
-      "am": { "title": "አጭር ያድርጉት", "alt": "ስላይድ፦ \"One or two pages\" (አንድ ወይም ሁለት ገጽ)። ሲቪ አጭር መሆን አለበት።" }
+      "time": 14,
+      "en": { "title": "Birtukan Yesfu", "alt": "Birtukan Yesfu, a woman with short curly hair in a black and white flowered dress, talks in an office. Trophies stand on a shelf behind her." },
+      "am": { "title": "ብርቱካን የሱፉ", "alt": "ብርቱካን የሱፉ፣ አጭር ጠጉራም ጸጉር ያላት እና ጥቁርና ነጭ የአበባ ቀሚስ የለበሰች ሴት፣ በቢሮ ውስጥ ትናገራለች። ከኋላዋ መደርደሪያ ላይ ዋንጫዎች አሉ።" }
     }
   ]
 }

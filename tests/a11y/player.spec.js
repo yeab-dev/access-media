@@ -49,9 +49,9 @@ test('captions: choose Amharic, resize and recolour', async ({ page }) => {
   await openDemo(page);
   const player = page.locator('db-player');
   await chooseCaptions(player, { label: 'አማርኛ' });
-  await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
+  await player.locator('video.main').evaluate((v) => { v.currentTime = 2; });
   const cc = player.locator('.cc-text:not(.sample)');
-  await expect(cc).toContainText('ሲቪ ችሎታዎን');
+  await expect(cc).toContainText('ስሜ ኪሩቤል');
   await expect(cc).toHaveAttribute('lang', 'am');
 
   await openSettings(player);
@@ -69,10 +69,10 @@ test('transcript: lines are buttons that jump to that moment', async ({ page }) 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(player.getByRole('heading', { name: 'Transcript' })).toBeVisible();
-  const line = player.getByRole('button', { name: /Start with your name/ });
+  const line = player.getByRole('button', { name: /after I entered first grade/ });
   await line.click();
   const t = await player.locator('video.main').evaluate((v) => v.currentTime);
-  expect(t).toBeGreaterThanOrEqual(10);
+  expect(t).toBeGreaterThanOrEqual(9.5);
   await expect(line).toHaveAttribute('aria-current', 'true');
 });
 
@@ -138,24 +138,24 @@ test('audio description: read out, video pauses, then resumes', async ({ page })
   const player = page.locator('db-player');
   await chooseDescriptions(player, { label: 'English' });
   const video = player.locator('video.main');
-  await video.evaluate((v) => { v.currentTime = 4.6; return v.play(); });
+  await video.evaluate((v) => { v.currentTime = 13.6; return v.play(); });
 
   const live = player.locator('.ad-live');
-  await expect(live).toHaveText('Description: Slide: What is a CV?', { timeout: 5000 });
+  await expect(live).toHaveText(/^Description: Birtukan Yesfu, a woman/, { timeout: 5000 });
   await expect(live).toHaveAttribute('aria-live', 'assertive');
   await expect(player.locator('.ad-text')).toBeVisible();
   expect(await video.evaluate((v) => v.paused)).toBe(true);
   // Resumes on its own after the estimated reading time.
-  await expect.poll(() => video.evaluate((v) => !v.paused), { timeout: 8000 }).toBe(true);
+  await expect.poll(() => video.evaluate((v) => !v.paused), { timeout: 16000 }).toBe(true);
 });
 
 test('audio description: Amharic text is marked as Amharic for the screen reader', async ({ page }) => {
   await openDemo(page);
   const player = page.locator('db-player');
   await chooseDescriptions(player, { label: 'አማርኛ' });
-  await player.locator('video.main').evaluate((v) => { v.currentTime = 9.6; return v.play(); });
+  await player.locator('video.main').evaluate((v) => { v.currentTime = 13.6; return v.play(); });
   const live = player.locator('.ad-live');
-  await expect(live).toContainText('ደረጃ 1', { timeout: 5000 });
+  await expect(live).toContainText('ብርቱካን የሱፉ', { timeout: 5000 });
   await expect(live).toHaveAttribute('lang', 'am');
 });
 
@@ -163,5 +163,5 @@ test('transcript includes audio descriptions', async ({ page }) => {
   await openDemo(page);
   const player = page.locator('db-player');
   await player.getByRole('button', { name: 'Transcript', exact: true }).click();
-  await expect(player.getByRole('button', { name: /Description: Slide: Step 1/ })).toBeVisible();
+  await expect(player.getByRole('button', { name: /Description: Birtukan Yesfu/ })).toBeVisible();
 });

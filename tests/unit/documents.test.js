@@ -37,12 +37,12 @@ test('HTML document: language, headings in order, a real description for every i
   assert.ok(res.url.endsWith('/media/demo/document/lesson.am.html'));
   const html = await res.text();
   assert.match(html, /<html lang="am">/);
-  assert.match(html, /<h1>ሲቪ እንዴት እንደሚጻፍ<\/h1>/);
+  assert.match(html, /<h1>የኪሩቤል ታሪክ፦ ከአእምሮ እድገት ውስንነት ጋር መኖር<\/h1>/);
   const levels = [...html.matchAll(/<h([1-6])\b/g)].map((m) => Number(m[1]));
   assert.equal(levels[0], 1);
   levels.forEach((l, i) => { if (i) assert.ok(l <= levels[i - 1] + 1, `heading jumps from h${levels[i - 1]} to h${l}`); });
   const alts = [...html.matchAll(/<img [^>]*alt="([^"]*)"/g)].map((m) => m[1]);
-  assert.equal(alts.length, 6);
+  assert.equal(alts.length, 3);
   for (const alt of alts) {
     assert.ok(alt.length > 15, `alt too short: ${alt}`);
     assert.doesNotMatch(alt, /\.(jpe?g|png)$|slide-\d/i, 'alt must not be a file name');
@@ -61,10 +61,10 @@ test('PDF document is tagged, titled, and carries the image descriptions', { ski
   if (!has('pdfinfo')) return;
   const info = execFileSync('pdfinfo', [file], { encoding: 'utf8' });
   assert.match(info, /Tagged:\s+yes/);
-  assert.match(info, /Title:\s+How to write a CV/);
+  assert.match(info, /Title:\s+Kirubel’s story/);
   const struct = execFileSync('pdfinfo', ['-struct', file], { encoding: 'utf8' });
   assert.match(struct, /H1/);
-  assert.match(struct, /Figure \["Slide with the question "What is a CV\?"/);
+  assert.match(struct, /Figure \["A girl in a red checked shirt/);
 });
 
 test('documents: unknown language and bad format answered in words', async () => {

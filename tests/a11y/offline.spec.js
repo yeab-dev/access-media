@@ -45,7 +45,7 @@ test('download the offline pack from the player and use it from disk', async ({ 
 
   // Open index.html straight from the file system, as on a phone with no data.
   await page.goto(pathToFileURL(path.join(dir, 'index.html')).href);
-  await expect(page.getByRole('heading', { level: 1, name: 'How to write a CV' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Kirubel’s story: living with an intellectual disability' })).toBeVisible();
   await expect(page.locator('#transcript-am')).toHaveAttribute('lang', 'am');
   await expect(page.getByText('Description:').first()).toBeVisible();
 
@@ -56,7 +56,7 @@ test('download the offline pack from the player and use it from disk', async ({ 
     for (let i = 0; i < 40 && !(t.cues && t.cues.length); i++) await new Promise((r) => setTimeout(r, 50));
     return t.cues ? t.cues.length : 0;
   });
-  expect(cues).toBe(6);
+  expect(cues).toBe(9);
   expect(await page.locator('video').evaluate((v) => new Promise((r) => {
     if (v.readyState >= 1) return r(v.duration);
     v.addEventListener('loadedmetadata', () => r(v.duration), { once: true });

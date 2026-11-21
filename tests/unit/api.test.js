@@ -42,7 +42,7 @@ test('transcript as HTML (Amharic) and as text, with descriptions', async () => 
   const txt = await fetch(`${base}/lessons/demo/transcript?lang=en&format=txt`);
   assert.match(txt.headers.get('content-type'), /text\/plain/);
   const body = await txt.text();
-  assert.match(body, /\[0:05\] Description: Slide: What is a CV\?/);
-  assert.match(body, /\[0:05\] A CV is a short document/);
+  assert.match(body, /\[0:14\] Description: Birtukan Yesfu/);
+  assert.match(body, /\[0:05\] It was discovered when I started having/);
   assert.equal((await fetch(`${base}/lessons/demo/transcript?lang=fr`)).status, 404);
 });

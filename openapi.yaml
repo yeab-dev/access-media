@@ -391,7 +391,7 @@ paths:
           description: Lessons
           content:
             application/json:
-              example: { lessons: [{ id: demo, title: How to write a CV, lang: en, duration: 30, status: ready, href: https://THIS-SERVER/api/v1/lessons/demo }] }
+              example: { lessons: [{ id: demo, title: 'Kirubel’s story: living with an intellectual disability', lang: en, duration: 30, status: ready, href: https://THIS-SERVER/api/v1/lessons/demo }] }
 
   /api/v1/me/lessons:
     get:

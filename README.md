@@ -230,7 +230,7 @@ Drafts come from an open speech model running inside the server (whisper.cpp wit
 
 **Not finished:**
 - **Real Ethiopian Sign Language is in one lesson only.** The lesson on the Savanna page, “Greetings in Ethiopian Sign Language” (`demo/data/lessons/ethsl-greetings`), uses a real signer: “Learn Ethiopian Sign Language: Important Phrases” by Visions Global Empowerment, signed by a student of Yekatit 23 School, Bahir Dar (Bahir Dar signs; other regions may differ), **used with permission** and credited under the player. It is rebuilt with `node scripts/make-ethsl-lesson.mjs source.mp4`. The “How to write a CV” lesson still has a **placeholder** sign video; record one with `/studio/sign.html` and an interpreter.
-- The **CV demo lesson has no speech** (placeholder slides).
+- The **demo lesson** is a 30-second clip from Fikir Ethiopia (`demo/data/lessons/demo/lesson.mp4`). Its English captions come from the original video's subtitles. Its Amharic captions are a draft translation; a native speaker should replace them with the exact words spoken.
 - **Service-worker offline**, **Braille (.brf)**, the **recorded live-session viewer**, and **LTI 1.3**.
 - `docker compose up` **has not yet been tested on another laptop**.
 - **Large uploads on slow connections:** on the hosted demo, an upload is cut after about 75 seconds (we measured about 7 MB at 90 KB/s from Addis Ababa). Upload a smaller file (for example 360p) or from a faster connection. Resumable uploads are not built.

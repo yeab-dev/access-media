@@ -1,38 +1,58 @@
 #!/usr/bin/env bash
 # Builds the demo lesson in data/lessons/demo from demo/data/lessons/demo.
-# The video is placeholder slides (no narration); replace with a real lesson.
+# The video is the recorded clip in demo/data/lessons/demo/lesson.mp4 (360p, 30 s);
+# without it, placeholder slides (no narration) are drawn instead.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT="${DATA_DIR:-data}/lessons/demo"
 mkdir -p "$OUT"
+# A sign video recorded in the studio for this lesson (manifest has "recordedAt") is kept through a rebuild.
+RECORDED_SIGN="$(node -e '
+  try { const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).sign;
+        if (s && s.recordedAt && !s.placeholder) process.stdout.write(JSON.stringify(s)); } catch {}
+' "$OUT/manifest.json")"
+[ -n "$RECORDED_SIGN" ] && [ -f "$OUT/lesson.ethsl.mp4" ] || RECORDED_SIGN=""
 cp demo/data/lessons/demo/* "$OUT/"
 
 FONT="$(fc-match -f '%{file}' 'DejaVu Sans:bold' 2>/dev/null || true)"
 [ -f "$FONT" ] || FONT=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf
 
-slide() { # start end text
-  printf "drawtext=fontfile=%s:text='%s':fontcolor=white:fontsize=h/14:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,%s,%s)'," "$FONT" "$3" "$1" "$2"
-}
-FILTER="$(slide 0 5 'How to write a CV')$(slide 5 10 'What is a CV?')$(slide 10 15 '1. Name, phone, town')$(slide 15 20 '2. Education and training')$(slide 20 25 '3. Work experience')$(slide 25 30 'One or two pages')"
-FILTER="${FILTER}drawtext=fontfile=${FONT}:text='%{pts\\:hms}':fontcolor=white@0.8:fontsize=h/24:x=12:y=12"
+if [ -f demo/data/lessons/demo/lesson.mp4 ]; then
+  echo "Using the recorded lesson video"
+  POSTER_AT=3
+else
+  slide() { # start end text
+    printf "drawtext=fontfile=%s:text='%s':fontcolor=white:fontsize=h/14:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,%s,%s)'," "$FONT" "$3" "$1" "$2"
+  }
+  FILTER="$(slide 0 5 'How to write a CV')$(slide 5 10 'What is a CV?')$(slide 10 15 '1. Name, phone, town')$(slide 15 20 '2. Education and training')$(slide 20 25 '3. Work experience')$(slide 25 30 'One or two pages')"
+  FILTER="${FILTER}drawtext=fontfile=${FONT}:text='%{pts\\:hms}':fontcolor=white@0.8:fontsize=h/24:x=12:y=12"
 
-ffmpeg -y -loglevel error \
-  -f lavfi -i "color=c=0x0b3d6b:s=640x360:r=25:d=30" \
-  -f lavfi -i "anullsrc=r=44100:cl=mono" -t 30 \
-  -vf "$FILTER" -c:v libx264 -profile:v main -crf 28 -g 50 -pix_fmt yuv420p \
-  -c:a aac -b:a 64k -movflags +faststart -shortest "$OUT/lesson.mp4"
+  ffmpeg -y -loglevel error \
+    -f lavfi -i "color=c=0x0b3d6b:s=640x360:r=25:d=30" \
+    -f lavfi -i "anullsrc=r=44100:cl=mono" -t 30 \
+    -vf "$FILTER" -c:v libx264 -profile:v main -crf 28 -g 50 -pix_fmt yuv420p \
+    -c:a aac -b:a 64k -movflags +faststart -shortest "$OUT/lesson.mp4"
+
+  POSTER_AT=1
+fi
 
 ffmpeg -y -loglevel error -i "$OUT/lesson.mp4" \
   -vf "scale=-2:240" -c:v libx264 -profile:v baseline -g 50 -b:v 180k -maxrate 200k -bufsize 400k \
   -c:a aac -b:a 32k -ac 1 -movflags +faststart "$OUT/lesson.240p.mp4"
 
 ffmpeg -y -loglevel error -i "$OUT/lesson.mp4" -vn -c:a libmp3lame -b:a 32k -ac 1 "$OUT/lesson.mp3"
-ffmpeg -y -loglevel error -ss 1 -i "$OUT/lesson.mp4" -frames:v 1 -q:v 5 "$OUT/poster.jpg"
+ffmpeg -y -loglevel error -ss "$POSTER_AT" -i "$OUT/lesson.mp4" -frames:v 1 -q:v 5 "$OUT/poster.jpg"
 
 # Sign language video. A real Ethiopian Sign Language recording, if the repo has one
 # (demo/data/lessons/demo/lesson.ethsl.mp4, copied above), is kept as it is.
 # Otherwise a placeholder with the same timecode is made, and the manifest says so.
-if [ -f demo/data/lessons/demo/lesson.ethsl.mp4 ]; then
+if [ -n "$RECORDED_SIGN" ]; then
+  echo "Keeping the sign language video recorded in the studio"
+  node -e '
+    const fs = require("fs"), f = process.argv[1], m = JSON.parse(fs.readFileSync(f, "utf8"));
+    m.sign = JSON.parse(process.argv[2]); fs.writeFileSync(f, JSON.stringify(m, null, 2) + "\n");
+  ' "$OUT/manifest.json" "$RECORDED_SIGN"
+elif [ -f demo/data/lessons/demo/lesson.ethsl.mp4 ]; then
   echo "Using the recorded sign language video"
 else
   ffmpeg -y -loglevel error \
@@ -45,4 +65,6 @@ else
   ' "$OUT/manifest.json"
 fi
 
+# Remember which videos this was built from, so a new clip or sign video in the repo rebuilds it (docker-start.sh).
+cat demo/data/lessons/demo/lesson.mp4 demo/data/lessons/demo/lesson.ethsl.mp4 2>/dev/null | sha256sum | cut -c1-64 > "$OUT/.built-from"
 echo "Demo lesson ready in $OUT"

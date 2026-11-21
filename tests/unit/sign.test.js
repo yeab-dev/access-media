@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, cp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, cp, readFile, readdir, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -10,6 +10,7 @@ const dir = await mkdtemp(path.join(tmpdir(), 'sign-test-'));
 await cp(new URL('../../data/lessons/demo', import.meta.url).pathname, path.join(dir, 'lessons/demo'), { recursive: true });
 process.env.DATA_DIR = dir;
 process.env.ADMIN_TOKEN = 'unit-test-code';
+process.env.KEEP_SIGN_RECORDINGS = '1';
 const { app } = await import('../../api/index.js');
 
 const clip = path.join(dir, 'clip.webm');
@@ -59,6 +60,18 @@ test('a recording is trimmed to the lesson, made small, sound removed, and attac
   assert.deepEqual(info.streams.map((s) => s.codec_type), ['video']);
   // The request was answered.
   assert.deepEqual((await (await fetch(`${base}/sign-requests`)).json()).requests, []);
+});
+
+test('KEEP_SIGN_RECORDINGS keeps the original recording, with sound, outside the public media folder', async () => {
+  const keep = path.join(dir, 'sign-recordings/demo');
+  const files = (await readdir(keep)).sort();
+  const video = files.find((f) => f.endsWith('.webm'));
+  assert.ok(video, `no original kept: ${files}`);
+  assert.deepEqual(probe(path.join(keep, video)).streams.map((s) => s.codec_type).sort(), ['audio', 'video']);
+  const meta = JSON.parse(await readFile(path.join(keep, video.replace(/\.webm$/, '.json')), 'utf8'));
+  assert.equal(meta.lesson, 'demo');
+  assert.equal(meta.file, video);
+  assert.equal((await fetch(`${base.replace('/api/v1', '')}/media/../sign-recordings/demo/${video}`)).status, 404);
 });
 
 test('a negative timing adjustment holds the first frame', async () => {
