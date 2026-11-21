@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lesson — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/tokens.css">
 <link rel="stylesheet" href="/portal/portal.css">
 <link rel="stylesheet" href="/portal/header.css">
 </head>
@@ -11,7 +12,7 @@
 <a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <div class="in">
-    <a class="brand" href="/">Digital Bridge learning media</a>
+    <a class="brand" href="/"><svg viewBox="0 0 34 34" aria-hidden="true" focusable="false"><rect class="mark-screen" x="1" y="4" width="32" height="26" rx="5"/><rect class="mark-sign" x="21" y="8" width="8" height="9" rx="1.5"/><rect class="mark-cap" x="5" y="20" width="18" height="3" rx="1.5"/><rect class="mark-cap" x="5" y="25" width="12" height="3" rx="1.5"/></svg><span>Digital Bridge<span class="sub">learning media</span></span></a>
     <nav aria-label="Main">
       <ul>
         <li><a href="/">Home</a></li>
@@ -29,8 +30,9 @@
   <p id="status" class="status" role="status" aria-live="polite"></p>
 
   <div id="content" hidden>
+    <p><a class="go back" href="/provider/lessons">All your lessons</a></p>
     <p class="meta" id="meta"></p>
-    <p><a href="/provider/lessons">All your lessons</a></p>
+    <nav aria-label="On this page"><ul class="toc" id="toc"></ul></nav>
 
     <section aria-labelledby="h-preview" id="preview-box">
       <h2 id="h-preview">How learners see it</h2>
@@ -72,7 +74,7 @@
     <section aria-labelledby="h-tracks">
       <h2 id="h-tracks">Captions and audio description</h2>
       <p>Captions are for learners who cannot hear. Audio description says what is on screen, for learners who cannot see.</p>
-      <ul class="items" id="tracks"></ul>
+      <ul class="items two" id="tracks"></ul>
       <p><a class="btn secondary" id="open-editor" href="/studio/captions.html">Open the caption editor</a></p>
     </section>
 
@@ -147,7 +149,9 @@ function render() {
   document.title = `${l.title} — Digital Bridge learning media`;
   $('title').textContent = l.title;
   const status = { ready: 'Ready', processing: 'Being converted', captioning: 'Making captions', failed: 'Failed' }[l.status || 'ready'];
-  $('meta').textContent = `${status}${l.statusMessage && l.status !== 'ready' ? `: ${l.statusMessage}` : ''} · Spoken in ${langName(l.lang)}${l.duration ? ` · ${minutes(l.duration)}` : ''} · Lesson name: ${l.id}`;
+  const kind = { ready: 'ready', failed: 'failed' }[l.status || 'ready'] || 'busy';
+  $('meta').innerHTML = `<span class="badge ${kind}">${esc(status)}</span>${l.statusMessage && l.status !== 'ready' ? `<span>${esc(l.statusMessage)}</span>` : ''}
+    <span>Spoken in ${esc(langName(l.lang))}</span>${l.duration ? `<span>${minutes(l.duration)}</span>` : ''}<span>Lesson name: <code>${esc(l.id)}</code></span>`;
   const ready = !l.status || l.status === 'ready';
 
   // Preview: the real player, as learners get it.
@@ -162,6 +166,9 @@ function render() {
     $('preview').append(p);
   }
   $('embed').textContent = embedCode(l.id);
+  // "On this page": one link per section that is shown.
+  $('toc').innerHTML = [...$('content').querySelectorAll('section[aria-labelledby]')].filter((sec) => !sec.hidden)
+    .map((sec) => { const h = $(sec.getAttribute('aria-labelledby')); return `<li><a href="#${h.id}">${esc(h.textContent)}</a></li>`; }).join('');
 
   $('t-en').value = l.title;
   $('t-am').value = l.titles?.am || '';
@@ -175,13 +182,13 @@ function render() {
   for (const t of have) {
     const state = t.auto ? 'Automatic: not checked yet' : t.reviewed === false ? 'Not reviewed yet' : 'Checked';
     rows.push(`<li><h3>${kinds[t.kind]}: ${esc(langName(t.srclang))}</h3><p class="meta">${state}</p>
-      <a href="/studio/captions.html?lesson=${enc}&track=${t.kind}:${t.srclang}" aria-label="${t.auto ? 'Check and correct' : 'Edit'} ${kinds[t.kind].toLowerCase()} in ${esc(langName(t.srclang))}">${t.auto ? 'Check and correct' : 'Edit'}</a></li>`);
+      <a class="go" href="/studio/captions.html?lesson=${enc}&track=${t.kind}:${t.srclang}" aria-label="${t.auto ? 'Check and correct' : 'Edit'} ${kinds[t.kind].toLowerCase()} in ${esc(langName(t.srclang))}">${t.auto ? 'Check and correct' : 'Edit'}</a></li>`);
   }
   for (const k of Object.keys(kinds)) {
     for (const lang of ['en', 'am']) {
       if (have.some((t) => t.kind === k && t.srclang === lang)) continue;
       rows.push(`<li><h3>${kinds[k]}: ${langName(lang)}</h3><p class="meta">None yet</p>
-        <a href="/studio/captions.html?lesson=${enc}&track=${k}:${lang}" aria-label="Write it: ${kinds[k].toLowerCase()} in ${langName(lang)}">Write it</a></li>`);
+        <a class="go" href="/studio/captions.html?lesson=${enc}&track=${k}:${lang}" aria-label="Write it: ${kinds[k].toLowerCase()} in ${langName(lang)}">Write it</a></li>`);
     }
   }
   $('tracks').innerHTML = rows.join('');
