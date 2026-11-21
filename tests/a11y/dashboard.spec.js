@@ -149,13 +149,13 @@ test('where it is shown: the Savanna page appears on the lesson by itself; the d
   await page.goto('/provider/lessons');
   await expect(page.locator('#list')).toContainText('Shown on');
 
-  // The host's Ethiopian Sign Language lesson, opened in Savanna, shows Savanna on the host's dashboard.
+  // The host's demo lesson, opened in Savanna, shows Savanna on the host's dashboard.
   await page.goto('/savanna/pages/concept-with-navigation.html');
   await expect(page.locator('db-player').getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 20000 });
-  await expect.poll(async () => (await (await page.request.get('/api/v1/lessons/ethsl-greetings/pages', { headers: { Authorization: 'Bearer test-code' } })).json()).pages.map((p) => p.url))
+  await expect.poll(async () => (await (await page.request.get('/api/v1/lessons/demo/pages', { headers: { Authorization: 'Bearer test-code' } })).json()).pages.map((p) => p.url))
     .toContain(new URL('/savanna/pages/concept-with-navigation.html', page.url()).href);
   const host = await page.context().newPage(); // a new tab, signed in with the host's master key
   await host.addInitScript(() => sessionStorage.setItem('studio-code', 'test-code'));
-  await host.goto('/provider/lesson?id=ethsl-greetings');
+  await host.goto('/provider/lesson?id=demo');
   await expect(host.getByRole('region', { name: "Where it's shown" }).getByRole('link', { name: /savanna\/pages\/concept-with-navigation\.html/ })).toBeVisible();
 });
