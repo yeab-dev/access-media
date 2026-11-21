@@ -39,6 +39,7 @@
   --accent: #72cfdb; --accent-fg: #0c1417; --accent-soft: #163a41; --signal: #f3c623; --signal-ink: #12222a;
   --ok: #7fd49a; --warn: #f5b765; --bad: #ff8a80; --code: #1b2a2f; --shadow: 0 1px 2px rgb(0 0 0 / 0.3); color-scheme: dark;
 }
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-contrast: more) {
   :root { --muted: var(--fg); --line: var(--fg); --hair: var(--line); --shadow: none; }
 }
