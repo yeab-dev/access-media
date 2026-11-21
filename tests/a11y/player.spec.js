@@ -76,6 +76,28 @@ test('transcript: lines are buttons that jump to that moment', async ({ page }) 
   await expect(line).toHaveAttribute('aria-current', 'true');
 });
 
+test('hide controls: only the video stays, focus stays on the toggle, H brings them back', async ({ page }) => {
+  await openDemo(page);
+  const player = page.locator('db-player');
+  const toggle = player.getByRole('button', { name: 'Hide controls' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await player.getByRole('button', { name: 'Captions', exact: true }).click();
+  await toggle.click();
+  const show = player.getByRole('button', { name: 'Show controls' });
+  await expect(show).toBeFocused();
+  await expect(show).toHaveAttribute('aria-expanded', 'false');
+  await expect(player.getByRole('button', { name: 'Play', exact: true })).toBeHidden();
+  await expect(player.getByRole('slider', { name: 'Position in video' })).toBeHidden();
+  await expect(player.locator('video.main')).toBeVisible();
+  await expect(player.getByRole('status').filter({ hasText: 'Controls hidden' })).toHaveCount(1);
+  await axe(page);
+  // Shortcuts still work with the controls hidden; H shows them again.
+  await player.locator('.stage').focus();
+  await page.keyboard.press('h');
+  await expect(player.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+  await expect(player.getByRole('button', { name: 'Hide controls' })).toHaveAttribute('aria-expanded', 'true');
+});
+
 test('reflows at 320 px wide (400% zoom equivalent) without horizontal scroll', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openDemo(page);
