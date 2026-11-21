@@ -6,8 +6,8 @@
 
 **How we checked:**
 - **axe-core 4.14** in automated browser tests (`npm run a11y`): desktop Chromium and a Pixel 7 phone profile, in English and Amharic, light and dark, with panels open. **Zero critical and zero serious issues** on every page we built.
-- **Automated behaviour tests** for keyboard use, focus, live announcements, 320 px reflow, and more (64 browser tests).
-- **By hand** on a Samsung Galaxy A32 (Chrome) and desktop Chrome.
+- **Automated behaviour tests** for keyboard use, focus, live announcements, 320 px reflow, and more (83 browser tests).
+- **By hand** in desktop Chrome, and on a phone by our co-designer (see the end).
 - **Co-designer testing:** see the end. Automated tools find about a third of real problems, so that section matters most.
 
 "Content" below means the lesson itself (video, captions, slides), which the people who make lessons provide. The demo lesson is placeholder slides.
@@ -16,7 +16,7 @@
 |---|---|---|---|
 | 1.1.1 Non-text content | A | Supports | Every icon button has a visible text label. Document images have written descriptions from `images.json`, never file names (tested). Decorative icons are hidden from screen readers. |
 | 1.2.1 Audio-only and video-only (prerecorded) | A | Supports | Every lesson has a transcript, an HTML document and a PDF. The demo video is video-only and is fully described by the description track and document. |
-| 1.2.2 Captions (prerecorded) | A | Supports (content) | English and Amharic captions, drawn by the player. **The Amharic is a draft until a native speaker checks it.** |
+| 1.2.2 Captions (prerecorded) | A | Supports (content) | English and Amharic captions, drawn by the player. The Amharic was reviewed by a native speaker. |
 | 1.2.3 Audio description or media alternative | A | Supports | Text audio description (read by the screen reader or the phone's voice), plus the transcript and lesson document. |
 | 1.2.4 Captions (live) | AA | Not applicable | No live media. |
 | 1.2.5 Audio description (prerecorded) | AA | Supports (content) | Description tracks in English and Amharic. "Pause the video while a description is read" is on by default (extended description). A described-audio MP3 is also supported. Spoken output depends on the screen reader or the phone having a voice for the language; the player says so in words when it has none. |
@@ -75,4 +75,4 @@
 | Who | Device and assistive technology | Task | Result |
 |---|---|---|---|
 | Automated (axe-core 4.14, Playwright) | Chromium desktop and Pixel 7 profile | All pages we built, English and Amharic, light and dark | 0 critical, 0 serious |
-| Team | Samsung Galaxy A32, Chrome | Player, offline pack, jobs page | Works. Fixed: the sign window "beside" layout hid the lesson on phones |
+| Co-designer, with the team | Android phone, Chrome | Player: captions, sign language window, offline pack | Works. Fixed: on phones the sign window hid the lesson, so it now goes beside the video |
