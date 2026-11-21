@@ -70,7 +70,7 @@ export function certificatesRouter({ dataDir, publicUrl }) {
     const now = new Date();
     const url = `${base(req)}/api/v1/certificates/${id}`;
     // The organisation that awards it, signed with this server's key.
-    const issuer = { id: `${base(req)}/api/v1/issuer`, type: ['Profile'], name: issuedBy ? `${issuedBy} (via Digital Bridge)` : 'Digital Bridge (test issuer)' };
+    const issuer = { id: `${base(req)}/api/v1/issuer`, type: ['Profile'], name: issuedBy ? `${issuedBy} (via Amedia)` : 'Amedia (test issuer)' };
     const credential = {
       '@context': ['https://www.w3.org/ns/credentials/v2', 'https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json'],
       id: url,
@@ -86,7 +86,7 @@ export function certificatesRouter({ dataDir, publicUrl }) {
           type: ['Achievement'],
           name: achievement.name,
           description: achievement.description || achievement.name,
-          criteria: { narrative: achievement.criteria || 'Completed the lesson on the Digital Bridge platform.' },
+          criteria: { narrative: achievement.criteria || 'Completed the lesson on Amedia.' },
         },
       },
     };
@@ -141,7 +141,7 @@ export function certificatesRouter({ dataDir, publicUrl }) {
 
   api.get('/issuer', (req, res) => res.json({
     '@context': ['https://www.w3.org/ns/credentials/v2', 'https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json'],
-    id: `${base(req)}/api/v1/issuer`, type: ['Profile'], name: 'Digital Bridge (test issuer)',
+    id: `${base(req)}/api/v1/issuer`, type: ['Profile'], name: 'Amedia (test issuer)',
   }));
 
   // Public key, so anyone can check a certificate without asking us.

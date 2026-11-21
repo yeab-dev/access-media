@@ -190,10 +190,10 @@ test('certificates name the provider; a new key replaces the old one', async () 
   assert.equal((await call('GET', '/me/certificates')).status, 401);
   assert.equal(res.status, 201);
   const cert = await res.json();
-  assert.equal(cert.credential.issuer.name, 'Debo Learning (via Digital Bridge)');
+  assert.equal(cert.credential.issuer.name, 'Debo Learning (via Amedia)');
   const page = await (await fetch(cert.page)).text();
   assert.match(page, /✓ Verified/);
-  assert.match(page, /Debo Learning \(via Digital Bridge\)/);
+  assert.match(page, /Debo Learning \(via Amedia\)/);
 
   const rotated = await call('POST', '/me/key', { key: a.key });
   assert.equal(rotated.status, 201);

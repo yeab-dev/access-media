@@ -238,7 +238,7 @@ export async function ensureDemoCertificate(port = PORT) {
   await certificates.issue(req, {
     id: 'demo-learner',
     learnerName: 'Test Learner',
-    achievement: { id: 'demo', name: 'How to write a CV', description: 'Digital Bridge lesson: writing a CV for your first job.' },
+    achievement: { id: 'demo', name: 'How to write a CV', description: 'Amedia lesson: writing a CV for your first job.' },
   });
 }
 

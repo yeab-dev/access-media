@@ -1,4 +1,4 @@
-# Accessible learning media: `<db-player>` — Track 2
+# Amedia (Accessible Media): `<db-player>` — Track 2
 
 Digital Bridge Accessibility Hackathon 2026 · Track 2, accessible learning media
 

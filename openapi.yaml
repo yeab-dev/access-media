@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Digital Bridge learning media API
+  title: Amedia API
   version: 1.1.0
   summary: Put accessible lessons on your website. Captions in English and Amharic, Ethiopian Sign Language, audio description, transcripts, offline packs, job cards and certificates.
   description: |
