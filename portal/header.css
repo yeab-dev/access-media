@@ -17,3 +17,8 @@
 .top li a:hover { background: var(--panel); }
 .top li a[aria-current=page] { background: var(--accent-soft); color: var(--accent); }
 @media (prefers-contrast: more) { .top li a[aria-current=page] { outline: 2px solid currentColor; outline-offset: -2px; } }
+.theme { display: flex; align-items: center; gap: 0.4rem; }
+.theme label { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin: 0; }
+.theme select { font: inherit; font-size: 0.92rem; color: var(--fg); background: var(--surface); min-height: 44px; padding: 0 0.6rem;
+  border: 1px solid var(--line); border-radius: 999px; width: auto; max-width: none; }
+.theme select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }

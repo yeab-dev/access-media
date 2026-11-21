@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lesson — Digital Bridge learning media</title>
 <link rel="stylesheet" href="/portal/tokens.css">
+<script src="/portal/theme.js"></script>
 <link rel="stylesheet" href="/portal/portal.css">
 <link rel="stylesheet" href="/portal/header.css">
 </head>
@@ -163,6 +164,7 @@ function render() {
     const p = document.createElement('db-player');
     p.setAttribute('lesson', l.id);
     p.setAttribute('label', `Preview: ${l.title}`);
+    p.setAttribute('theme', document.documentElement.dataset.theme || 'auto'); // follows the site's Theme choice
     $('preview').append(p);
   }
   $('embed').textContent = embedCode(l.id);

@@ -68,3 +68,24 @@ test('old links to the removed Debo example site go to the Savanna page', async 
   await page.goto('/debo/lessons/creativity-at-work.html');
   expect(new URL(page.url()).pathname).toBe('/savanna/pages/concept-with-navigation.html');
 });
+
+test('theme: light or dark from the header, remembered, the player follows; the docs stay light', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/');
+  const theme = page.getByRole('combobox', { name: 'Theme' });
+  await expect(theme).toHaveValue('auto');
+  await theme.selectOption('dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('db-player')).toHaveAttribute('theme', 'dark');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(12, 20, 23)');
+  await axe(page, 'db-player');
+  await page.goto('/provider/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await axe(page);
+  await page.goto('/docs');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.getByRole('combobox', { name: 'Theme' })).toHaveCount(0);
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Theme' }).selectOption('auto');
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /./);
+});
