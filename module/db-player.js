@@ -11,7 +11,9 @@
  *
  * Attributes: src, captions, sign, describe (.vtt text descriptions and/or an .mp3 described-audio track),
  *   poster, label, lesson, api, lang ("en", "am", or any i18n/<lang>.json), theme ("auto" | "light" | "dark"),
- *   heading-level.
+ *   heading-level, report-page ("off": do not tell the lesson's owner which page shows it).
+ * In API mode the player tells the server the page it is on (address without ?query or #hash, nothing about the
+ *   learner), so the lesson's owner sees on their dashboard where each lesson is shown.
  * Events (bubble, composed): db-player:ready, db-player:progress {seconds, percent}, db-player:complete,
  *   db-player:prefs {captionSize, captionColor, signPosition, ...}, db-player:sign-requested {lesson}.
  * Interface text lives in i18n/<lang>.json: adding a language is one new file. No framework, no build step.
@@ -319,11 +321,25 @@ class DbPlayer extends HTMLElement {
       if (!manifest.sources.length) throw new Error('no video source: set src="..." or lesson="..."');
       this.#manifest = manifest;
       this.#render(manifest);
+      if (this.getAttribute('lesson')) this.#reportPage();
     } catch (err) {
       console.error('db-player: could not load the lesson', err);
       const msg = this.#root.querySelector('.message');
       if (msg) { msg.setAttribute('role', 'alert'); msg.textContent = t.loadError; }
     }
+  }
+
+  /** Tell the lesson's owner which page shows it: the page address only (no ?query, no #hash), once per lesson. */
+  #reported = '';
+  #reportPage() {
+    const id = this.getAttribute('lesson');
+    if (this.getAttribute('report-page') === 'off' || this.#reported === id || !/^https?:$/.test(location.protocol)) return;
+    this.#reported = id;
+    const api = (this.getAttribute('api') || scriptOrigin).replace(/\/$/, '');
+    // text/plain keeps it a simple request (no preflight); keepalive lets it finish if the learner leaves at once.
+    fetch(`${api}/api/v1/lessons/${encodeURIComponent(id)}/pages`, {
+      method: 'POST', body: `${location.origin}${location.pathname}`, headers: { 'Content-Type': 'text/plain' }, keepalive: true, credentials: 'omit',
+    }).catch(() => {});
   }
 
   /** Level 2: lesson metadata from the API. */

@@ -197,7 +197,7 @@ async function practiceLesson(provider, req) {
   const from = path.join(LESSONS_DIR, 'demo');
   const to = path.join(LESSONS_DIR, id);
   // Generated files (documents, offline pack) and old versions are rebuilt or not needed.
-  await cp(from, to, { recursive: true, filter: (src) => !/(^|\/)(document|offline\.zip)$|\.previous/.test(path.relative(from, src)) });
+  await cp(from, to, { recursive: true, filter: (src) => !/(^|\/)(document|offline\.zip|pages\.json)$|\.previous/.test(path.relative(from, src)) });
   const m = JSON.parse(await readFile(path.join(to, 'manifest.json'), 'utf8'));
   Object.assign(m, { id, title: `Practice lesson: ${m.title}`, owner: provider.id, practice: true, createdAt: new Date().toISOString() });
   if (m.titles?.am) m.titles = { ...m.titles, am: `የልምምድ ትምህርት፦ ${m.titles.am}` };

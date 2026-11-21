@@ -123,3 +123,39 @@ test('provider dashboard: sign in, manage a lesson, jobs, certificates, webhooks
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Sign in with your API key' })).toBeVisible();
 });
+
+test('where it is shown: the Savanna page appears on the lesson by itself; the dashboard preview does not count', async ({ page }) => {
+  test.skip(test.info().project.name === 'android', 'provider tools tested on desktop');
+  const made = await (await page.request.post('/api/v1/keys', { data: { organisation: 'Pages Test Provider' } })).json();
+  const practice = made.practiceLesson.id;
+  await page.addInitScript((k) => sessionStorage.setItem('studio-code', k), made.key);
+
+  // Signed in: the practice lesson is on no page yet, and opening the dashboard (with its preview) does not change that.
+  await page.goto(`/provider/lesson?id=${practice}`);
+  await expect(page.locator('db-player').getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 20000 });
+  await page.reload();
+  await expect(page.locator('#pages')).toContainText('Not on any page yet');
+  await page.goto('/provider/');
+  await expect(page.locator('#todo')).toContainText('is ready but not on any page of your website yet');
+
+  // The provider puts it on a page (here the demo page); a learner opens it.
+  await page.goto(`/demo/?lesson=${practice}`);
+  await expect(page.locator('db-player').getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 20000 });
+  await expect.poll(async () => (await (await page.request.get(`/api/v1/lessons/${practice}/pages`, { headers: { Authorization: `Bearer ${made.key}` } })).json()).pages.length).toBe(1);
+  await page.goto(`/provider/lesson?id=${practice}`);
+  const shown = page.getByRole('region', { name: "Where it's shown" });
+  await expect(shown.getByRole('link', { name: /\/demo\/$/ })).toBeVisible();
+  await axe(page, 'db-player');
+  await page.goto('/provider/lessons');
+  await expect(page.locator('#list')).toContainText('Shown on');
+
+  // The host's Ethiopian Sign Language lesson, opened in Savanna, shows Savanna on the host's dashboard.
+  await page.goto('/savanna/pages/concept-with-navigation.html');
+  await expect(page.locator('db-player').getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 20000 });
+  await expect.poll(async () => (await (await page.request.get('/api/v1/lessons/ethsl-greetings/pages', { headers: { Authorization: 'Bearer test-code' } })).json()).pages.map((p) => p.url))
+    .toContain(new URL('/savanna/pages/concept-with-navigation.html', page.url()).href);
+  const host = await page.context().newPage(); // a new tab, signed in with the host's master key
+  await host.addInitScript(() => sessionStorage.setItem('studio-code', 'test-code'));
+  await host.goto('/provider/lesson?id=ethsl-greetings');
+  await expect(host.getByRole('region', { name: "Where it's shown" }).getByRole('link', { name: /savanna\/pages\/concept-with-navigation\.html/ })).toBeVisible();
+});

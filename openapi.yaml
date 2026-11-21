@@ -300,7 +300,23 @@ paths:
           description: Your key works
           content:
             application/json:
-              example: { admin: false, provider: { id: p_8f2a1c0d9e3b, name: Debo Learning }, keyEndsWith: X3Xw, createdAt: '2026-11-16T07:30:00.000Z', limits: { lessons: 10, uploadMB: 200, jobs: 50, webhooks: 5 } }
+              example: { admin: false, provider: { id: p_8f2a1c0d9e3b, name: Debo Learning }, keyEndsWith: X3Xw, createdAt: '2026-11-16T07:30:00.000Z', website: 'https://debo.et/', limits: { lessons: 10, uploadMB: 200, jobs: 50, webhooks: 5 } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+
+    patch:
+      tags: [1. Get started]
+      summary: Save your website's address
+      description: Optional. Your dashboard links to it. Send `null` to remove it.
+      security: [{ apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { website: { type: [string, 'null'], format: uri } } }
+            example: { website: 'https://debo.et/' }
+      responses:
+        '200': { description: Saved, content: { application/json: { example: { website: 'https://debo.et/' } } } }
+        '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Unauthorised' }
 
   /api/v1/me/key:
@@ -550,6 +566,47 @@ paths:
         '403': { $ref: '#/components/responses/NotYours' }
         '502': { description: The speech model gave an error or could not be reached., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
         '503': { description: This server has no speech model set up., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/v1/lessons/{id}/pages:
+    post:
+      tags: [2. Lessons]
+      summary: Say which page shows a lesson (the player does this)
+      description: |
+        The player sends this by itself in API mode, once per page load: the page address as plain text, without the
+        `?query` or `#hash` (nothing about the learner). It must come from a browser on that page (the `Origin` header
+        must match the address). Turn it off on a page with `<db-player report-page="off">`.
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      requestBody:
+        required: true
+        content: { text/plain: { schema: { type: string }, example: 'https://debo.et/courses/cv' } }
+      responses:
+        '204': { description: Noted }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    get:
+      tags: [2. Lessons]
+      summary: Pages that show your lesson
+      description: Newest first, up to 50. Only the lesson's owner can see them. Your dashboard's preview is not counted.
+      security: [{ apiKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/lessonId' }]
+      responses:
+        '200': { description: The pages, content: { application/json: { example: { pages: [{ url: 'https://debo.et/courses/cv', firstSeen: '2026-11-20T08:00:00.000Z', lastSeen: '2026-11-21T09:30:00.000Z' }] } } } }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [2. Lessons]
+      summary: Take a page off the list
+      description: It comes back if the lesson is still on that page when it is next opened.
+      security: [{ apiKey: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/lessonId' }
+        - { name: page, in: query, required: true, schema: { type: string }, example: 'https://debo.et/courses/cv' }
+      responses:
+        '204': { description: Taken off }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+        '403': { $ref: '#/components/responses/NotYours' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/lessons/{id}/slides:
     get:

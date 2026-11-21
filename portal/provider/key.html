@@ -31,6 +31,16 @@
   <div id="content" hidden>
     <dl id="facts"></dl>
 
+    <section aria-labelledby="h-site" id="site-box">
+      <h2 id="h-site">Your website</h2>
+      <form id="site-form" novalidate>
+        <label for="site">Your website's address (optional)</label>
+        <input id="site" type="url" autocomplete="url" aria-describedby="site-hint">
+        <p class="hint" id="site-hint">The site where learners watch your lessons, for example https://debo.et. Your dashboard links to it. The pages that show each lesson are found by themselves.</p>
+        <div class="actions"><button class="btn secondary" type="submit">Save the address</button></div>
+      </form>
+    </section>
+
     <section aria-labelledby="h-device">
       <h2 id="h-device">This browser</h2>
       <label class="check"><input type="checkbox" id="remember"> Remember my key on this device</label>
@@ -59,7 +69,7 @@
 
     <section aria-labelledby="h-data">
       <h2 id="h-data">What we keep about you</h2>
-      <p>Only your organisation's name and a scrambled form of your key (a SHA-256 hash), never the key itself. That is why a lost key cannot be shown again.</p>
+      <p>Only your organisation's name, your website's address if you give it, and a scrambled form of your key (a SHA-256 hash), never the key itself. That is why a lost key cannot be shown again. For each lesson we also keep the addresses of the pages that show it, so you can see them here.</p>
     </section>
   </div>
 </main>
@@ -76,8 +86,21 @@ start('/provider/key', async (me) => {
        <dt>Since</dt><dd>${esc(date(me.createdAt))}</dd>
        <dt>Limits on this server</dt><dd>${L.lessons} lessons, videos up to ${L.uploadMB} MB, ${L.jobs} jobs, ${L.webhooks} webhooks</dd>`;
   $('new-box').hidden = !!me.admin;
+  $('site-box').hidden = !!me.admin;
+  $('site').value = me.website || '';
   $('remember').checked = remembered();
   $('curl').textContent = `curl -H "Authorization: Bearer YOUR_KEY" ${location.origin}/api/v1/me/lessons`;
+});
+
+$('site-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const value = $('site').value.trim();
+  $('site').removeAttribute('aria-invalid');
+  if (value && !/^https?:\/\/\S+$/.test(value)) { $('site').setAttribute('aria-invalid', 'true'); say('Write the whole address, starting with https://.', 'bad'); $('site').focus(); return; }
+  try {
+    const r = await api('/me', { method: 'PATCH', body: { website: value || null } });
+    say(r.website ? 'Website saved. It is linked on your dashboard.' : 'Website address removed.', 'ok');
+  } catch (err) { say(err.message, 'bad'); }
 });
 
 $('remember').addEventListener('change', () => {
