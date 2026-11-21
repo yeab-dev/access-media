@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Add a lesson — upload a video, get captions</title>
+<title>Add a lesson — upload a video</title>
 <link rel="stylesheet" href="/portal/tokens.css">
 <script src="/portal/theme.js"></script>
 <style>
@@ -22,6 +22,8 @@
   input[type=file]::file-selector-button { min-height: 44px; padding: 0 1rem; margin-inline-end: 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font: inherit; color: inherit; cursor: pointer; }
   button { min-height: 44px; padding: 0 1.1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; font-weight: 600; margin: 1.25rem 0.5rem 0 0; }
   button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  a.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1.1rem; border-radius: 8px; background: var(--accent); color: var(--bg); font-weight: 600; text-decoration: none; }
+  a.btn:hover { text-decoration: underline; }
   button:disabled { opacity: 0.55; cursor: not-allowed; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .status { padding: 0.5rem 0.75rem; border-inline-start: 4px solid var(--accent); background: var(--panel); }
@@ -57,7 +59,7 @@
 </header>
 <main id="main">
   <h1>Add a lesson</h1>
-  <p class="lead">Upload a lesson video. The server makes it small enough for 3G phones and, when a speech model is set up, writes captions in the language spoken in the video. Then put one tag on your page.</p>
+  <p class="lead">Upload a lesson video. The server makes it small enough for 3G phones. Then add captions and sign language on the lesson's page, and put one tag on your page.</p>
 
   <form id="form" novalidate>
     <label for="code">Your API key</label>
@@ -75,7 +77,7 @@
       <option value="om" lang="om">Afaan Oromoo (Oromo)</option>
       <option value="ti" lang="ti">ትግርኛ (Tigrinya)</option>
     </select>
-    <p class="hint" id="lang-hint">Automatic captions are made in this language. Amharic speech recognition makes more mistakes: plan to check them.</p>
+    <p class="hint" id="lang-hint">When a speech model is set up, automatic captions are made in this language in the background. Amharic speech recognition makes more mistakes: plan to check them.</p>
 
     <label for="video">Video file</label>
     <input id="video" type="file" accept="video/*" required aria-describedby="video-hint">
@@ -93,21 +95,19 @@
     <ol class="steps">
       <li id="step-upload">Upload the video</li>
       <li id="step-convert">Convert it for slow connections (360p, 240p, audio only)</li>
-      <li id="step-captions">Make captions with the speech model</li>
     </ol>
   </section>
 
   <section id="done" aria-labelledby="h-done" hidden tabindex="-1">
     <h2 id="h-done">Your lesson is ready</h2>
     <p id="done-message"></p>
+    <p><a class="btn" id="next" href="/provider/lessons">Add captions and sign language</a></p>
+    <p class="hint">On the lesson's page you write or correct captions and audio description, record sign language, and add slides.</p>
     <p>Put these two lines on the page where the lesson should play:</p>
     <pre><code id="embed"></code></pre>
     <button type="button" id="copy">Copy the code</button>
     <ul class="links">
-      <li><a id="manage" href="/provider/lessons">Manage it on your dashboard</a> (titles, slides, documents)</li>
       <li><a id="watch" href="#">Watch the lesson</a></li>
-      <li><a id="check" href="#">Check and correct the captions</a></li>
-      <li><a id="record" href="sign.html">Record sign language for it</a></li>
     </ul>
   </section>
 </main>
@@ -160,21 +160,21 @@ $('form').addEventListener('submit', async (e) => {
   $('go').disabled = true;
   $('done').hidden = true;
   $('progress-box').hidden = false;
-  for (const s of ['upload', 'convert', 'captions']) $(`step-${s}`).classList.remove('done');
+  for (const s of ['upload', 'convert']) $(`step-${s}`).classList.remove('done');
   say('Uploading the video…');
   try {
     const { id } = await upload(form);
     $('step-upload').classList.add('done');
     say('Uploaded. Converting the video for slow connections. This can take a few minutes; you can leave this page open.');
-    // Follow the lesson until it is ready. Messages are only announced when they change.
+    // Follow the lesson until it is converted. Automatic captions (if any) are made afterwards in the
+    // background: nobody waits for them here; the lesson's page shows them when they arrive.
     let last = '';
     for (;;) {
       await wait(2000);
       const lesson = await (await fetch(`${api}/lessons/${id}`, { cache: 'no-store' })).json();
-      if (lesson.status !== 'processing') $('step-convert').classList.add('done');
       if (lesson.status === 'failed') throw new Error(lesson.statusMessage);
+      if (lesson.status !== 'processing') { $('step-convert').classList.add('done'); finish(lesson); break; }
       if (lesson.statusMessage !== last) { last = lesson.statusMessage; say(last); }
-      if (lesson.status === 'ready') { finish(lesson); break; }
     }
   } catch (err) {
     say(err.message, 'bad');
@@ -184,14 +184,12 @@ $('form').addEventListener('submit', async (e) => {
 });
 
 function finish(lesson) {
-  const auto = lesson.tracks.some((t) => t.kind === 'captions' && t.auto);
-  if (auto) $('step-captions').classList.add('done');
-  $('done-message').textContent = lesson.statusMessage;
+  $('done-message').textContent = lesson.status === 'captioning'
+    ? 'The speech model is writing draft captions in the background. They appear on the lesson\'s page when they are done; you do not need to wait.'
+    : lesson.statusMessage;
   $('embed').innerHTML = esc(`<script type="module" src="${location.origin}/module/db-player.js"></` + `script>\n<db-player lesson="${lesson.id}"></db-player>`);
   $('watch').href = `/demo/?lesson=${encodeURIComponent(lesson.id)}`;
-  $('check').href = `captions.html?lesson=${encodeURIComponent(lesson.id)}`;
-  $('manage').href = `/provider/lesson?id=${encodeURIComponent(lesson.id)}`;
-  $('record').href = `sign.html?lesson=${encodeURIComponent(lesson.id)}`;
+  $('next').href = `/provider/lesson?id=${encodeURIComponent(lesson.id)}`;
   $('done').hidden = false;
   say(`“${lesson.title}” is ready.`, 'ok');
   $('done').focus();

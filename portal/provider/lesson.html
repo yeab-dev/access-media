@@ -142,8 +142,25 @@ start('/provider/lessons', async (me) => {
     return;
   }
   render();
+  follow();
   await Promise.all([loadSlides(), loadPages()]);
 });
+
+// A new lesson may still be converting or getting automatic captions: check every few seconds and
+// show the result when it changes, keeping anything already typed in the title fields.
+async function follow() {
+  while (lesson.status === 'processing' || lesson.status === 'captioning') {
+    await new Promise((r) => setTimeout(r, 5000));
+    let next;
+    try { next = await api(`/lessons/${enc}`); } catch { continue; }
+    if (next.status === lesson.status && next.statusMessage === lesson.statusMessage) continue;
+    const typed = ['t-en', 't-am', 'spoken'].map((f) => [f, $(f).value]);
+    lesson = next;
+    render();
+    for (const [f, v] of typed) $(f).value = v;
+    if (lesson.status === 'ready') say(lesson.statusMessage || 'The lesson is ready.');
+  }
+}
 
 function render() {
   const l = lesson;

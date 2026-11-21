@@ -7,7 +7,7 @@ const axe = async (page) => {
   expect(results.violations.filter((v) => ['critical', 'serious'].includes(v.impact)).map((v) => v.id)).toEqual([]);
 };
 
-test('add a lesson: upload a video, follow progress, get the code for the page', async ({ page }) => {
+test('add a lesson: upload a video, follow conversion, then go add captions and sign language', async ({ page }) => {
   test.skip(test.info().project.name === 'android', 'staff tool tested on desktop');
   test.setTimeout(60_000);
   await page.goto('/studio/lessons.html');
@@ -30,7 +30,9 @@ test('add a lesson: upload a video, follow progress, get the code for the page',
   // This test server has no speech model: said plainly, and the editor is one link away.
   await expect(done).toContainText('No speech model is set up');
   await expect(done.locator('code')).toContainText('<db-player lesson="upload-test-');
-  await expect(done.getByRole('link', { name: 'Check and correct the captions' })).toHaveAttribute('href', /captions\.html\?lesson=upload-test-/);
+  // No waiting for captions: one link goes to the lesson's page, where captions and sign language are added.
+  await expect(page.getByText('Make captions with the speech model')).toHaveCount(0);
+  await expect(done.getByRole('link', { name: 'Add captions and sign language' })).toHaveAttribute('href', /\/provider\/lesson\?id=upload-test-/);
   await axe(page);
 
   // The new lesson plays in the player.
