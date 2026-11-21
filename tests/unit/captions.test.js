@@ -60,7 +60,7 @@ test('saving updates the lesson, keeps the previous version, and can add a new l
   const res = await save({ lang: 'en', vtt: 'WEBVTT\n\n00:00:00.500 --> 00:00:05.000\n[music] Welcome. Corrected line.\n' });
   assert.equal(res.status, 201);
   assert.match(await readFile(path.join(dir, 'lessons/demo/lesson.en.vtt'), 'utf8'), /Corrected line/);
-  assert.match(await readFile(path.join(dir, 'lessons/demo/lesson.en.vtt.previous'), 'utf8'), /Welcome. In this lesson/);
+  assert.match(await readFile(path.join(dir, 'lessons/demo/lesson.en.vtt.previous'), 'utf8'), /My name is Kirubel Anteneh/);
   const om = await save({ lang: 'om', vtt: 'WEBVTT\n\n00:00:00.500 --> 00:00:05.000\nBaga nagaan dhuftan.\n' });
   assert.equal(om.status, 201);
   const lesson = await (await fetch(`${base}/lessons/demo`)).json();

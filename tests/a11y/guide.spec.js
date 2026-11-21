@@ -98,12 +98,12 @@ test('transcript downloads as text', async ({ page }) => {
   await ready(page);
   const player = page.locator('db-player');
   await player.getByRole('button', { name: 'Transcript', exact: true }).click();
-  await expect(player.getByRole('button', { name: /Start with your name/ })).toBeVisible();
+  await expect(player.getByRole('button', { name: /It was discovered when I started having/ })).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent('download'), player.getByRole('button', { name: 'Download transcript (text)' }).click()]);
   expect(download.suggestedFilename()).toMatch(/\.txt$/);
   const text = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8'));
-  expect(text).toContain('[0:10] Start with your name');
-  expect(text).toContain('Description: Slide: Step 1');
+  expect(text).toContain('[0:05] It was discovered when I started having');
+  expect(text).toContain('Description: Birtukan Yesfu');
 });
 
 test('Amharic interface comes from i18n/am.json', async ({ page }) => {
@@ -154,9 +154,9 @@ test('easy to use: three clear rows, one tap for captions in the chosen language
   const cc = player.getByRole('button', { name: 'የጽሑፍ ትርጉም', exact: true });
   await cc.click();
   await expect(cc).toHaveAttribute('aria-pressed', 'true');
-  await player.locator('video.main').evaluate((v) => { v.currentTime = 6; });
+  await player.locator('video.main').evaluate((v) => { v.currentTime = 2; });
   await expect(player.locator('.cc-text:not(.sample)')).toHaveAttribute('lang', 'am');
-  await expect(player.locator('.cc-text:not(.sample)')).toContainText('ሲቪ');
+  await expect(player.locator('.cc-text:not(.sample)')).toContainText('ኪሩቤል');
   await cc.click();
   await expect(cc).toHaveAttribute('aria-pressed', 'false');
 

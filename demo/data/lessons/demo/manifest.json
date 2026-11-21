@@ -1,9 +1,10 @@
 {
   "id": "demo",
-  "title": "How to write a CV",
+  "title": "Kirubel’s story: living with an intellectual disability",
   "lang": "en",
   "duration": 30,
   "poster": "poster.jpg",
+  "credit": "Video: a 30-second clip from “In Support of Services for People with Intellectual Disabilities” by Fikir Ethiopia (RFAC). English captions from the original subtitles. Amharic captions, descriptions: Amedia (draft).",
   "sources": [
     {
       "quality": "360p",
@@ -50,10 +51,12 @@
   "sign": {
     "src": "lesson.ethsl.mp4",
     "lang": "sgn-et",
-    "label": "Ethiopian Sign Language"
+    "label": "Ethiopian Sign Language",
+    "recordedAt": "2026-11-21T10:55:36.080Z",
+    "offset": 0
   },
   "images": "images.json",
   "titles": {
-    "am": "ሲቪ እንዴት እንደሚጻፍ"
+    "am": "የኪሩቤል ታሪክ፦ ከአእምሮ እድገት ውስንነት ጋር መኖር"
   }
 }
