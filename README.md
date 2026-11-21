@@ -52,7 +52,7 @@ Open **http://localhost:8080**.
 |---|---|
 | `/` | For lesson providers: what you can do, in three steps |
 | `/get-key` | Get your API key (organisation name only) |
-| `/provider/` | Provider dashboard (sign in with the key): what needs attention, lessons (`/provider/lessons`, one lesson at `/provider/lesson?id=…`: preview, page code, titles EN/AM, tracks, sign language, slides and picture descriptions, documents, delete), `/provider/jobs`, `/provider/certificates`, `/provider/webhooks`, `/provider/key` (new key, sign out) |
+| `/provider/` | Provider dashboard (sign in with the key): what needs attention, lessons (`/provider/lessons`, one lesson at `/provider/lesson?id=…`: preview, page code, where it's shown (found by the player), titles EN/AM, tracks, sign language, slides and picture descriptions, documents, delete), `/provider/jobs`, `/provider/certificates`, `/provider/webhooks`, `/provider/key` (new key, sign out) |
 | `/docs` | Documentation: a step-by-step guide and every call with "Try it out" |
 | `/demo/blank.html` | The player on an empty page: no Bootstrap, no Savanna CSS, attributes only |
 | `/savanna/pages/concept-with-navigation.html` | The example site: inside Savanna, under the lesson banner |
@@ -107,6 +107,7 @@ Files can be on any web server. Caption language comes from the file name (`less
 | `lang` | Interface language by default (`en`, `am`, or any `i18n/<code>.json`). The learner's own choice in the player wins and is remembered |
 | `theme` | `auto` (default), `light`, `dark`. Colours come from the host's `--bs-primary` and font from `--bs-body-font-family` when present, darkened if needed for contrast |
 | `heading-level` | Level of the transcript heading (default 2) |
+| `report-page` | `off` stops the player telling the lesson's owner which page shows it (API mode only; see Data and privacy) |
 
 **Events** (they bubble out of the component; the host decides what to do):
 
@@ -198,7 +199,8 @@ Measured with `node scripts/measure-3g.mjs` (Chrome DevTools' classic "Slow 3G":
 - **Learners:** no account to watch. Settings (language, caption style, sign window) are kept only in the browser (`localStorage`).
 - **Sign language requests:** anonymous count and date per lesson. Nothing about the learner.
 - **Interpreter recordings:** stored with the lesson. **Sound is removed** before saving.
-- **Lesson providers:** only the organisation name they type. Their key is stored as a hash; no email or password.
+- **Lesson providers:** only the organisation name they type, and their website's address if they give it. Their key is stored as a hash; no email or password.
+- **Where lessons are shown:** in API mode the player sends the address of the page it is on (origin and path; never the `?query` or `#hash`, where learner details can be), so the owner's dashboard lists where each lesson is live. Nothing about the learner is sent. Only the lesson's owner can see the list; it is kept in `/data/lessons/<id>/pages.json` (up to 50 pages). A host turns it off with `<db-player report-page="off">`.
 - **Certificates:** the learner's name, the achievement and the date: what the learner chooses to share with an employer. Webhooks never include names.
 - **Nothing leaves the host** unless the host sets it up: the speech model is local (`ASR_URL`, optional), and there are no analytics or third-party scripts.
 - **Delete:** lessons are folders in the `lessons` volume (`/data/lessons/<id>`); certificates are files in `/data/certificates/` (delete the file to withdraw one). Previous versions of captions and sign videos sit next to them (`*.previous*`).

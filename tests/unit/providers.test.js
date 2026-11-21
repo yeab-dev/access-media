@@ -202,6 +202,46 @@ test('certificates name the provider; a new key replaces the old one', async () 
   assert.equal((await (await call('GET', '/me', { key })).json()).provider.id, a.provider.id, 'same provider, new key');
 });
 
+test('where a lesson is shown: reported by the player, address only, seen only by the owner', async () => {
+  const lesson = b.practiceLesson.id;
+  const report = (page, origin) => fetch(`${base}/lessons/${lesson}/pages`, {
+    method: 'POST', body: page, headers: { 'Content-Type': 'text/plain', ...(origin ? { Origin: origin } : {}) },
+  });
+  const own = new URL(base).origin;
+  const pagesOf = async (key = b.key) => (await (await call('GET', `/lessons/${lesson}/pages`, { key })).json()).pages;
+  assert.deepEqual(await pagesOf(), [], 'a practice lesson starts with no pages');
+
+  assert.equal((await report('https://debo.example/courses/cv?learner=abebe#t=10', 'https://debo.example')).status, 204);
+  assert.equal((await report('https://debo.example/courses/cv?other=1', 'https://debo.example')).status, 204, 'the same page again');
+  assert.equal((await report('https://debo.example/x', 'https://evil.example')).status, 400, 'the page must be on the site that sends it');
+  assert.equal((await report('https://debo.example/x')).status, 400, 'only a browser on a page reports it');
+  assert.equal((await report('javascript:alert(1)', 'null')).status, 400);
+  assert.equal((await report(`${own}/provider/lesson`, own)).status, 204);
+  assert.equal((await report(`${own}/studio/captions.html`, own)).status, 204);
+  await wait(50);
+  const pages = await pagesOf();
+  assert.deepEqual(pages.map((p) => p.url), ['https://debo.example/courses/cv'], 'no query or hash kept; the dashboard and studio previews do not count');
+  assert.ok(pages[0].firstSeen && pages[0].lastSeen);
+
+  const other = await newKey('Pages Other Provider');
+  assert.equal((await call('GET', `/lessons/${lesson}/pages`, { key: other.key })).status, 403, 'only the owner sees them');
+  assert.equal((await call('GET', `/lessons/${lesson}/pages`)).status, 401);
+  const mine = (await (await call('GET', '/me/lessons', { key: b.key })).json()).lessons.find((l) => l.id === lesson);
+  assert.equal(mine.pages.length, 1, '/me/lessons includes them');
+
+  assert.equal((await call('DELETE', `/lessons/${lesson}/pages?page=${encodeURIComponent('https://debo.example/courses/cv')}`, { key: other.key })).status, 403);
+  assert.equal((await call('DELETE', `/lessons/${lesson}/pages?page=${encodeURIComponent('https://debo.example/courses/cv')}`, { key: b.key })).status, 204);
+  await wait(50);
+  assert.deepEqual(await pagesOf(), []);
+
+  // Your website (optional)
+  assert.equal((await call('PATCH', '/me', { key: b.key, json: { website: 'debo.example' } })).status, 400);
+  assert.equal((await (await call('PATCH', '/me', { key: b.key, json: { website: 'https://debo.example' } })).json()).website, 'https://debo.example/');
+  assert.equal((await (await call('GET', '/me', { key: b.key })).json()).website, 'https://debo.example/');
+  await call('PATCH', '/me', { key: b.key, json: { website: null } });
+  assert.equal((await (await call('GET', '/me', { key: b.key })).json()).website, null);
+});
+
 test('sign-up can be switched off', async () => {
   process.env.SIGNUP = 'closed';
   try {

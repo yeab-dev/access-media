@@ -57,6 +57,9 @@ start('/provider/lessons', async () => {
       <h2><a href="/provider/lesson?id=${encodeURIComponent(l.id)}">${esc(l.title)}</a></h2>
       <p class="meta"><span class="badge ${kind}">${label}</span> Spoken in ${esc(langName(l.lang))}${l.duration ? ` · ${minutes(l.duration)}` : ''} · Lesson name: <code>${esc(l.id)}</code></p>
       ${l.status === 'failed' || (l.status !== 'ready' && l.statusMessage) ? `<p>${esc(l.statusMessage || '')}</p>` : ''}
+      ${l.status === 'ready' ? `<p class="meta">${l.pages.length
+        ? `Shown on ${l.pages.length === 1 ? `<a href="${esc(l.pages[0].url)}" rel="noopener noreferrer">${esc(l.pages[0].url.replace(/^https?:\/\//, ''))}</a>` : `${l.pages.length} pages`}`
+        : 'Not on any page yet'}</p>` : ''}
       <ul class="features" aria-label="Access features">
         ${feat(l.captions.length, `Captions${caps ? `: ${esc(caps)}` : ''}`)}
         ${feat(l.signLanguage, 'Sign language')}

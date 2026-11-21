@@ -94,7 +94,7 @@ export const notYours = (res, what = 'lesson') => res.status(403).json({
   error: 'not_yours', message: `This ${what} belongs to another provider. Your key can only change your own.`,
 });
 
-/** POST /api/v1/keys (public), GET /api/v1/me, POST /api/v1/me/key. */
+/** POST /api/v1/keys (public), GET/PATCH /api/v1/me, POST /api/v1/me/key. */
 export function keysRouter({ onNewProvider } = {}) {
   const router = express.Router();
   const recent = new Map(); // ip -> [times]; at most 5 new keys per address per hour
@@ -135,7 +135,24 @@ export function keysRouter({ onNewProvider } = {}) {
   router.get('/me', requireKey, async (req, res) => {
     if (req.who.admin) return res.json({ admin: true, name: 'Host (master key)', limits: null });
     const p = (await store.load()).providers.find((x) => x.id === req.who.provider.id);
-    res.json({ admin: false, provider: req.who.provider, keyEndsWith: p?.keyEnd, createdAt: p?.createdAt, limits: limits() });
+    res.json({ admin: false, provider: req.who.provider, keyEndsWith: p?.keyEnd, createdAt: p?.createdAt, website: p?.website || null, limits: limits() });
+  });
+
+  // Your website's address (optional), so the dashboard can link to it. null removes it.
+  router.patch('/me', requireKey, express.json({ limit: '2kb' }), async (req, res) => {
+    if (req.who.admin) return res.status(400).json({ error: 'master_key', message: 'The master key has no profile to change.' });
+    const given = req.body?.website;
+    let website = null;
+    if (given !== null && given !== '') {
+      let u;
+      try { u = new URL(String(given ?? '')); } catch { /* handled below */ }
+      if (!u || !['http:', 'https:'].includes(u.protocol) || u.href.length > 300) {
+        return res.status(400).json({ error: 'invalid_website', message: 'Give your website\'s address, starting with https://.' });
+      }
+      website = u.href;
+    }
+    await store.change((d) => { const p = d.providers.find((x) => x.id === req.who.provider.id); if (website) p.website = website; else delete p.website; });
+    res.json({ website });
   });
 
   // A new key; the old one stops working at once.

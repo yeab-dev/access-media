@@ -228,12 +228,14 @@ export function lessonsRouter({ lessonsDir }) {
   // My lessons, with the code to put each one on a page.
   router.get('/me/lessons', requireKey, async (req, res) => {
     const list = (await ownLessons(req)).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    for (const m of list) m.pages = (await readPages(m.id)).sort(byLastSeen);
     res.json({
       lessons: list.map((m) => ({
         id: m.id, title: m.title, lang: m.lang, duration: m.duration, status: m.status || 'ready', statusMessage: m.statusMessage,
         captions: (m.tracks || []).filter((t) => t.kind === 'captions').map((t) => ({ lang: t.srclang, automatic: !!t.auto })),
         audioDescription: (m.tracks || []).filter((t) => t.kind === 'descriptions').map((t) => t.srclang),
         signLanguage: !!m.sign?.src && !m.sign.placeholder,
+        pages: m.pages,
         href: `${publicOrigin(req)}/api/v1/lessons/${m.id}`,
         embed: embedCode(req, m.id),
       })),
@@ -313,6 +315,73 @@ export function lessonsRouter({ lessonsDir }) {
     await writeFile(`${file}.tmp`, JSON.stringify({ images: clean }, null, 2));
     await rename(`${file}.tmp`, file);
     res.json({ slides: clean, document: `${publicOrigin(req)}/api/v1/lessons/${id}/document` });
+  });
+
+  // ---------- Where each lesson is shown ----------
+  // The player, in API mode, reports the page it is on (origin + path only: never the query string, which can hold
+  // learner details). Only the lesson's owner can read the list. A host can turn this off with report-page="off".
+  const OWN_PAGES = /^\/(provider|studio|portal|docs)(\/|$)/; // our own previews do not count
+  const MAX_PAGES = 50;
+  const pagesFile = (id) => path.join(dirOf(id), 'pages.json');
+  const readPages = (id) => readFile(pagesFile(id), 'utf8').then((t) => JSON.parse(t).pages || []).catch(() => []);
+  const lastWrite = new Map(); // "id page" -> time, so a busy page is written at most once an hour
+  let pagesWriting = Promise.resolve();
+  const changePages = (id, fn) => (pagesWriting = pagesWriting.then(async () => {
+    const pages = fn(await readPages(id));
+    await writeFile(`${pagesFile(id)}.tmp`, JSON.stringify({ pages }, null, 2));
+    await rename(`${pagesFile(id)}.tmp`, pagesFile(id));
+  }).catch((err) => console.error(`lessons: could not save pages for ${id}`, err)));
+  const byLastSeen = (a, b) => String(b.lastSeen).localeCompare(String(a.lastSeen));
+
+  router.post('/lessons/:id/pages', express.text({ limit: '2kb', type: () => true }), async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    try { await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    let u;
+    try { u = new URL(String(req.body || '').trim()); } catch { /* handled below */ }
+    if (!u || !['http:', 'https:'].includes(u.protocol) || u.href.length > 500) {
+      return bad(res, 'invalid_page', 'Send the address of the page the player is on (https://…) as the request body.');
+    }
+    // Browsers always send Origin with a POST: the page must be on the site that sends it.
+    const origin = req.get('origin');
+    if (!origin) return bad(res, 'no_origin', 'Only the player on a web page reports where it is shown.');
+    if (origin !== u.origin) return bad(res, 'wrong_origin', 'The page address must be on the site that sends it.');
+    const page = `${u.origin}${u.pathname}`;
+    if (u.origin === publicOrigin(req) && OWN_PAGES.test(u.pathname)) return res.status(204).end();
+    const key = `${id} ${page}`;
+    const now = Date.now();
+    if (now - (lastWrite.get(key) || 0) < 3_600_000) return res.status(204).end();
+    lastWrite.set(key, now);
+    const time = new Date(now).toISOString();
+    await changePages(id, (pages) => {
+      const found = pages.find((p) => p.url === page);
+      if (found) found.lastSeen = time; else pages.push({ url: page, firstSeen: time, lastSeen: time });
+      return pages.sort(byLastSeen).slice(0, MAX_PAGES);
+    });
+    res.status(204).end();
+  });
+
+  router.get('/lessons/:id/pages', requireKey, async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    let m;
+    try { m = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, m.owner)) return notYours(res);
+    res.json({ pages: (await readPages(id)).sort(byLastSeen) });
+  });
+
+  // Take a page off the list (it comes back if the player is still on it).
+  router.delete('/lessons/:id/pages', requireKey, async (req, res) => {
+    const { id } = req.params;
+    if (!ID.test(id)) return bad(res, 'invalid_id', 'Lesson ids use lowercase letters, numbers and hyphens.');
+    let m;
+    try { m = await readManifest(id); } catch { return bad(res, 'not_found', 'There is no lesson with this id.', 404); }
+    if (!mayChange(req, m.owner)) return notYours(res);
+    const page = String(req.query.page || '');
+    if (!(await readPages(id)).some((p) => p.url === page)) return bad(res, 'not_found', 'This lesson is not listed on that page. Give the address exactly as listed, as ?page=…', 404);
+    await changePages(id, (pages) => pages.filter((p) => p.url !== page));
+    for (const k of lastWrite.keys()) if (k === `${id} ${page}`) lastWrite.delete(k);
+    res.status(204).end();
   });
 
   // Delete a lesson and all its files (video, captions, sign language, documents, offline pack).

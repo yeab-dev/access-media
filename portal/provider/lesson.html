@@ -44,6 +44,12 @@
       <button class="btn secondary" type="button" id="copy-embed">Copy the code</button>
     </section>
 
+    <section aria-labelledby="h-pages" id="pages-box">
+      <h2 id="h-pages">Where it's shown</h2>
+      <p class="hint">Found by the player itself: when someone opens a page with this lesson on it, the page appears here (its address only, nothing about the learner). Your dashboard's preview does not count.</p>
+      <div id="pages"></div>
+    </section>
+
     <section aria-labelledby="h-name">
       <h2 id="h-name">Name and language</h2>
       <form id="name-form" novalidate>
@@ -105,7 +111,7 @@
 </main>
 
 <script type="module">
-import { start, api, $, esc, embedCode, copyText, langName, minutes, say } from '/portal/provider.js';
+import { start, api, $, esc, embedCode, copyText, langName, minutes, say, date } from '/portal/provider.js';
 
 const id = new URLSearchParams(location.search).get('id') || '';
 const enc = encodeURIComponent(id);
@@ -133,7 +139,7 @@ start('/provider/lessons', async (me) => {
     return;
   }
   render();
-  await loadSlides();
+  await Promise.all([loadSlides(), loadPages()]);
 });
 
 function render() {
@@ -147,6 +153,7 @@ function render() {
   // Preview: the real player, as learners get it.
   $('preview-box').hidden = !ready;
   $('embed-box').hidden = !ready;
+  $('pages-box').hidden = !ready;
   if (ready && !$('preview').firstChild) {
     if (!customElements.get('db-player')) import('/module/db-player.js');
     const p = document.createElement('db-player');
@@ -199,6 +206,32 @@ function render() {
   }
   docs.push(`<li><a href="${l.links.offlinePack}">Offline pack</a> (small audio, transcript and a light web page, for slow phones)</li>`);
   $('docs').innerHTML = docs.join('');
+}
+
+// ---------- where it's shown ----------
+async function loadPages() {
+  const { pages } = await api(`/lessons/${enc}/pages`);
+  if (!pages.length) {
+    $('pages').innerHTML = '<p>Not on any page yet. Paste the code above into a page of your website and open it once: the page appears here.</p>';
+    return;
+  }
+  $('pages').innerHTML = `<ul class="items">${pages.map((p) => `<li>
+      <h3><a href="${esc(p.url)}" rel="noopener noreferrer">${esc(p.url.replace(/^https?:\/\//, ''))}</a></h3>
+      <p class="meta">Last opened ${esc(date(p.lastSeen))}</p>
+      <button class="btn small secondary" type="button" data-page="${esc(p.url)}" aria-label="Take ${esc(p.url)} off the list">Take off the list</button>
+    </li>`).join('')}</ul>
+    <p class="hint">Took the lesson off a page? Take the page off the list. If the lesson is still on it, it comes back the next time the page is opened.</p>`;
+  for (const b of $('pages').querySelectorAll('[data-page]')) {
+    b.addEventListener('click', async () => {
+      try {
+        await api(`/lessons/${enc}/pages?page=${encodeURIComponent(b.dataset.page)}`, { method: 'DELETE' });
+        await loadPages();
+        say('Page taken off the list.', 'ok');
+        $('h-pages').tabIndex = -1;
+        $('h-pages').focus();
+      } catch (err) { say(err.message, 'bad'); }
+    });
+  }
 }
 
 // ---------- name ----------

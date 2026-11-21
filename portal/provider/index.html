@@ -32,6 +32,8 @@
     <h2>At a glance</h2>
     <ul class="stats" id="stats"></ul>
 
+    <p id="website"></p>
+
     <h2 id="h-todo">What needs your attention</h2>
     <div id="todo"></div>
 
@@ -72,6 +74,10 @@ start('/provider/', async (me) => {
     ['Webhooks', limit(hooks.webhooks.length, L?.webhooks), '/provider/webhooks'],
   ].map(([name, n, href]) => `<li><a href="${href}"><span class="n">${n}</span> ${name}</a></li>`).join('');
 
+  $('website').innerHTML = me.admin ? ''
+    : me.website ? `Your website: <a href="${esc(me.website)}" rel="noopener noreferrer">${esc(me.website.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>`
+    : 'Add your website\'s address on <a href="/provider/key#h-site">Your key</a>, to have it here.';
+
   // What to do next, most important first: broken, waiting, then missing access features.
   const wanted = Object.fromEntries((asked.requests || []).map((r) => [r.id, r.count]));
   const todo = [];
@@ -85,6 +91,7 @@ start('/provider/', async (me) => {
     }
     if (!l.captions.length) todo.push([2, `${t} has no captions. <a href="/studio/captions.html?lesson=${encodeURIComponent(l.id)}">Write captions</a>`]);
     if (l.captions.length && !l.captions.some((c) => c.lang === 'am')) todo.push([3, `${t} has no Amharic captions. <a href="/studio/captions.html?lesson=${encodeURIComponent(l.id)}&track=captions:am">Add them</a>`]);
+    if (!l.pages.length) todo.push([3, `<a href="${at}">${t}</a> is ready but not on any page of your website yet. <a href="${at}#h-embed">Get its code</a>`]);
     if (!l.signLanguage) {
       const n = wanted[l.id];
       todo.push([n ? 2 : 4, `${t} has no sign language${n ? ` (${n} learner${n === 1 ? '' : 's'} asked for it)` : ''}. <a href="/studio/sign.html?lesson=${encodeURIComponent(l.id)}">Record it</a>`]);
