@@ -1,12 +1,19 @@
-/* The site header and skip link, shared by the provider pages (portal.css) and the studio pages. Uses each page's colour tokens. */
+/* The site header and skip link, shared by the provider pages (portal.css) and the studio pages. Colours from tokens.css. */
 .skip { position: absolute; inset-inline-start: -999px; }
-.skip:focus { inset-inline-start: 1rem; inset-block-start: 1rem; z-index: 10; background: var(--bg); padding: 0.5rem 1rem; }
+.skip:focus { inset-inline-start: 1rem; inset-block-start: 1rem; z-index: 20; background: var(--surface); color: var(--fg); padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm); box-shadow: var(--shadow); }
 
-.top { border-block-end: 1px solid var(--line); }
-.top .in { max-width: 64rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; justify-content: space-between; }
-.brand { font-weight: 800; color: var(--fg); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
-.top ul { display: flex; flex-wrap: wrap; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
-.top li a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.7rem; border-radius: 6px; color: var(--fg); text-decoration: none; font-weight: 600; }
+.top { background: var(--surface); border-block-end: 1px solid var(--hair); }
+.top .in { max-width: 72rem; margin: 0 auto; padding: 0.4rem 1rem; display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; align-items: center; justify-content: space-between; }
+.brand { display: inline-flex; align-items: center; gap: 0.6rem; min-height: 48px; color: var(--fg); text-decoration: none; font-weight: 800; line-height: 1.15; }
+.brand svg { width: 34px; height: 34px; flex: none; }
+.brand .sub { display: block; font-weight: 500; font-size: 0.82rem; color: var(--muted); }
+.mark-screen { fill: var(--accent); }
+.mark-cap { fill: var(--signal); }
+.mark-sign { fill: var(--surface); }
+.top ul { display: flex; flex-wrap: wrap; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
+.top li a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.8rem; border-radius: 999px; color: var(--fg);
+  text-decoration: none; font-weight: 600; font-size: 0.95rem; }
 .top li a:hover { background: var(--panel); }
-.top li a[aria-current=page] { background: var(--panel); color: var(--accent); }
-
+.top li a[aria-current=page] { background: var(--accent-soft); color: var(--accent); }
+@media (prefers-contrast: more) { .top li a[aria-current=page] { outline: 2px solid currentColor; outline-offset: -2px; } }

@@ -236,6 +236,7 @@ export function lessonsRouter({ lessonsDir }) {
         audioDescription: (m.tracks || []).filter((t) => t.kind === 'descriptions').map((t) => t.srclang),
         signLanguage: !!m.sign?.src && !m.sign.placeholder,
         pages: m.pages,
+        poster: m.poster ? new URL(m.poster, `${publicOrigin(req)}/media/${m.id}/`).href : null,
         href: `${publicOrigin(req)}/api/v1/lessons/${m.id}`,
         embed: embedCode(req, m.id),
       })),

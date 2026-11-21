@@ -78,28 +78,38 @@ export const date = (iso) => {
   return e ? `${g} (Ethiopian calendar: ${e})` : g;
 };
 
+const ICON = {
+  overview: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  lessons: '<rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/>',
+  add: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  jobs: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  certificates: '<circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/>',
+  webhooks: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+};
 const MENU = [
-  ['/provider/', 'Overview'],
-  ['/provider/lessons', 'Lessons'],
-  ['/studio/lessons.html', 'Add a lesson'],
-  ['/provider/jobs', 'Jobs'],
-  ['/provider/certificates', 'Certificates'],
-  ['/provider/webhooks', 'Webhooks'],
-  ['/provider/key', 'Your key'],
+  ['/provider/', 'Overview', 'overview'],
+  ['/provider/lessons', 'Lessons', 'lessons'],
+  ['/studio/lessons.html', 'Add a lesson', 'add'],
+  ['/provider/jobs', 'Jobs', 'jobs'],
+  ['/provider/certificates', 'Certificates', 'certificates'],
+  ['/provider/webhooks', 'Webhooks', 'webhooks'],
+  ['/provider/key', 'Your key', 'key'],
 ];
 
 function menu(current) {
   const nav = document.createElement('nav');
   nav.className = 'subnav';
   nav.setAttribute('aria-label', 'Dashboard');
-  nav.innerHTML = `<ul>${MENU.map(([href, text]) =>
-    `<li><a href="${href}"${href === current ? ' aria-current="page"' : ''}>${text}</a></li>`).join('')}</ul>`;
+  nav.innerHTML = `<ul>${MENU.map(([href, text, icon]) =>
+    `<li><a href="${href}"${href === current ? ' aria-current="page"' : ''}${icon === 'add' ? ' class="add"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICON[icon]}</svg>${text}</a></li>`).join('')}</ul>`;
   return nav;
 }
 
 function signInForm(message) {
   const box = document.createElement('section');
   box.id = 'signin';
+  box.className = 'card';
   box.setAttribute('aria-labelledby', 'h-signin');
   box.innerHTML = `
     <h2 id="h-signin">Sign in with your API key</h2>
@@ -122,11 +132,21 @@ function signInForm(message) {
 export async function start(current, render) {
   const main = $('main');
   const h1 = main.querySelector('h1');
-  h1.before(menu(current));
+  // Layout: side menu (with who is signed in) + the page's own content in the work area.
+  main.classList.add('dash');
+  const shell = document.createElement('div');
+  shell.className = 'shell';
+  const side = document.createElement('div');
+  side.className = 'side';
+  const pane = document.createElement('div');
+  pane.className = 'pane';
+  pane.append(...main.childNodes);
   const who = document.createElement('p');
   who.className = 'who';
   who.hidden = true;
-  h1.before(who);
+  side.append(menu(current), who);
+  shell.append(side, pane);
+  main.append(shell);
   const content = $('content');
 
   const showSignIn = (message) => {

@@ -1,0 +1,44 @@
+/* Colours and type for the provider site (home, key, dashboard, studio, docs header).
+   Blue Nile teal ink on cool paper; caption yellow is the one highlight, used the way captions are marked on screen.
+   System fonts only: no font host, so nothing about visitors leaves this server.
+   All text pairs are at least 4.5:1, borders and focus rings at least 3:1, in light, dark and more-contrast modes. */
+:root {
+  color-scheme: light dark;
+  --bg: #f4f7f7;          /* page paper, a little cool */
+  --surface: #ffffff;     /* cards, forms */
+  --panel: #e9efef;       /* quiet fills, code */
+  --fg: #12222a;          /* ink */
+  --muted: #475a62;
+  --line: #76898f;        /* borders that must be seen (3:1) */
+  --hair: #d3dddd;        /* dividers only */
+  --accent: #0a5d6d;      /* Blue Nile teal: links, primary buttons */
+  --accent-fg: #ffffff;
+  --accent-soft: #d9ecee;
+  --signal: #f3c623;      /* caption yellow: highlights, always with dark ink on it */
+  --signal-ink: #12222a;
+  --ok: #17703a;
+  --warn: #8a5300;
+  --bad: #b3261e;
+  --code: #e9efef;
+  --shadow: 0 1px 2px rgb(18 34 42 / 0.06), 0 6px 20px rgb(18 34 42 / 0.06);
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Ethiopic", "Nyala", "Abyssinica SIL", sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+  --step--1: 0.875rem; --step-0: 1rem; --step-1: 1.125rem; --step-2: 1.375rem; --step-3: 1.75rem; --step-4: clamp(2rem, 5vw, 3rem);
+  --radius: 10px; --radius-sm: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1417; --surface: #131f23; --panel: #1b2a2f; --fg: #e7efef; --muted: #a8bbbf; --line: #5f777e; --hair: #26373c;
+    --accent: #72cfdb; --accent-fg: #0c1417; --accent-soft: #163a41; --signal: #f3c623; --signal-ink: #12222a;
+    --ok: #7fd49a; --warn: #f5b765; --bad: #ff8a80; --code: #1b2a2f; --shadow: 0 1px 2px rgb(0 0 0 / 0.3); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1417; --surface: #131f23; --panel: #1b2a2f; --fg: #e7efef; --muted: #a8bbbf; --line: #5f777e; --hair: #26373c;
+  --accent: #72cfdb; --accent-fg: #0c1417; --accent-soft: #163a41; --signal: #f3c623; --signal-ink: #12222a;
+  --ok: #7fd49a; --warn: #f5b765; --bad: #ff8a80; --code: #1b2a2f; --shadow: 0 1px 2px rgb(0 0 0 / 0.3); color-scheme: dark;
+}
+@media (prefers-contrast: more) {
+  :root { --muted: var(--fg); --line: var(--fg); --hair: var(--line); --shadow: none; }
+}
