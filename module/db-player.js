@@ -179,6 +179,11 @@ dialog.help dd { margin: 0; }
 .note { margin: 0; padding: 0.5rem 0.75rem; background: var(--ap-panel); border-top: 1px solid var(--ap-line); }
 .note:empty { display: none; }
 .credit { margin: 0; padding: 0.4rem 0.75rem; font-size: 0.85em; color: var(--ap-muted); }
+/* "Hide controls": only the video (with captions and the sign window) stays; one button brings the rest back. */
+.controls-toggle-row { display: flex; justify-content: flex-end; margin: 0; padding: 0.25rem 0.5rem 0; }
+.controls-toggle { font-size: 0.9em; }
+.player.controls-hidden .seek-row, .player.controls-hidden .controls, .player.controls-hidden .note, .player.controls-hidden .credit { display: none; }
+.player.controls-hidden .controls-toggle-row { padding-bottom: 0.25rem; }
 .ctl .size { font-size: 0.7rem; color: var(--ap-muted); }
 .media { position: relative; background: #000; }
 .sign { position: absolute; z-index: 2; left: 0; top: 0; width: 28%; aspect-ratio: var(--sign-ratio, 3 / 4);
@@ -426,6 +431,7 @@ class DbPlayer extends HTMLElement {
     <span id="ap-sign-help" class="sr-only">${t.signHelp}</span>` : ''}
   </div>
   <span id="ap-stage-hint" class="sr-only">${t.stageHint}</span>
+  <p class="controls-toggle-row"><button type="button" class="text-btn controls-toggle" aria-expanded="true" aria-controls="ap-controls">${t.hideControls}</button></p>
   ${m.describeAudio ? `<audio class="ad-audio" preload="none" crossorigin="anonymous" src="${escapeAttr(m.describeAudio)}"></audio>` : ''}
   <p class="note" role="status"></p>
   <p class="ad-text" aria-hidden="true" hidden></p>
@@ -433,7 +439,7 @@ class DbPlayer extends HTMLElement {
     <input class="seek" type="range" min="0" max="${Number(m.duration) || 0}" step="1" value="0" aria-label="${t.seek}">
     <span class="time" aria-hidden="true"><span class="cur">0:00</span> / <span class="dur">${clock(m.duration)}</span></span>
   </div>
-  <div class="controls">
+  <div class="controls" id="ap-controls">
     <div class="row main">
       <button type="button" class="ctl play primary">${icon('play')}<span class="lbl">${t.play}</span></button>
       <button type="button" class="ctl back">${icon('back')}<span class="lbl">${t.back}</span></button>
@@ -542,7 +548,7 @@ class DbPlayer extends HTMLElement {
       follow: $('.follow'), cues: $('.cues'), fs: $('.fs'), status: $('.status'),
       sign: $('.sign'), signVideo: $('.sign-video'), signResize: $('.sign-resize'), signBtn: $('.sign-btn'),
       signTools: $('.sign-tools'), note: $('.note'), adAudio: $('.ad-audio'),
-      help: $('dialog.help'), helpBtn: $('.help-btn'), offline: $('.offline'), transcriptDl: $('.transcript-dl'),
+      help: $('dialog.help'), helpBtn: $('.help-btn'), controlsToggle: $('.controls-toggle'), offline: $('.offline'), transcriptDl: $('.transcript-dl'),
       langSelect: $('.lang-select'), adSelect: $('.ad-select'), ccBtn: $('.cc-btn'), adBtn: $('.ad-btn'), signOffHint: $('.sign-off-hint'), adMode: $('.ad-mode'), adPause: $('.ad-pause'), adText: $('.ad-text'), adLive: $('.ad-live'),
     };
     if (m.poster) els.stage.style.setProperty('--ap-poster', `url("${m.poster.replace(/["\\\n]/g, encodeURIComponent)}")`);
@@ -687,6 +693,7 @@ class DbPlayer extends HTMLElement {
       }
     });
     els.helpBtn.addEventListener('click', () => els.help.showModal());
+    els.controlsToggle.addEventListener('click', () => this.#toggleControls());
     this.#root.querySelector('.help-close').addEventListener('click', () => els.help.close());
     els.help.addEventListener('close', () => els.helpBtn.focus());
     els.transcriptDl.addEventListener('click', () => this.#downloadTranscript());
@@ -737,9 +744,20 @@ class DbPlayer extends HTMLElement {
       case 's': this.#els.signBtn.click(); break;
       case 't': this.#els.transcriptBtn.click(); break;
       case 'f': this.#toggleFullscreen(); break;
+      case 'h': this.#toggleControls(); break;
       default: return;
     }
     e.preventDefault();
+  }
+
+  // Hide or show everything but the video. Focus stays on the toggle (it never hides); shortcuts keep working.
+  #toggleControls() {
+    const els = this.#els;
+    const hide = !els.player.classList.contains('controls-hidden');
+    els.player.classList.toggle('controls-hidden', hide);
+    els.controlsToggle.setAttribute('aria-expanded', String(!hide));
+    els.controlsToggle.textContent = hide ? this.t.showControls : this.t.hideControls;
+    this.#announce(hide ? this.t.controlsHidden : this.t.controlsShown);
   }
 
   // ---------- Sign language window ----------

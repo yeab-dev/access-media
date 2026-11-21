@@ -126,6 +126,10 @@
       "Full screen"
     ],
     [
+      "H",
+      "Hide or show the controls"
+    ],
+    [
       "?",
       "Keyboard help"
     ],
@@ -190,5 +194,9 @@
   "automaticTrack": "{language} (automatic)",
   "automaticNote": "Automatic captions: they may have mistakes.",
   "captionsNone": "There are no captions for this lesson yet.",
-  "signNoneNoCaptions": "There is no sign language video for this lesson yet."
+  "signNoneNoCaptions": "There is no sign language video for this lesson yet.",
+  "hideControls": "Hide controls",
+  "showControls": "Show controls",
+  "controlsHidden": "Controls hidden. Only the video shows; the keyboard shortcuts still work.",
+  "controlsShown": "Controls shown."
 }
