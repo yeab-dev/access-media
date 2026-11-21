@@ -1,4 +1,4 @@
-// Shared by every Digital Bridge component: interface text, and the learner's remembered choices.
+// Shared by every Amedia component: interface text, and the learner's remembered choices.
 // One language switch for everything: a choice made in any component applies to all of them.
 
 const STORE_KEY = 'db-player:prefs';
@@ -23,7 +23,7 @@ function fetchStrings(code) {
 export async function loadStrings(lang) {
   const code = String(lang || 'en').toLowerCase().split('-')[0];
   const [en, own] = await Promise.all([fetchStrings('en'), code === 'en' ? null : fetchStrings(code)]);
-  if (!en && !own) throw new Error('Digital Bridge: could not load interface text (i18n/*.json)');
+  if (!en && !own) throw new Error('Amedia: could not load interface text (i18n/*.json)');
   return own ? { lang: code, t: { ...en, ...own } } : { lang: 'en', t: en };
 }
 
