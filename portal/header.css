@@ -1,0 +1,12 @@
+/* The site header and skip link, shared by the provider pages (portal.css) and the studio pages. Uses each page's colour tokens. */
+.skip { position: absolute; inset-inline-start: -999px; }
+.skip:focus { inset-inline-start: 1rem; inset-block-start: 1rem; z-index: 10; background: var(--bg); padding: 0.5rem 1rem; }
+
+.top { border-block-end: 1px solid var(--line); }
+.top .in { max-width: 64rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; justify-content: space-between; }
+.brand { font-weight: 800; color: var(--fg); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+.top ul { display: flex; flex-wrap: wrap; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
+.top li a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.7rem; border-radius: 6px; color: var(--fg); text-decoration: none; font-weight: 600; }
+.top li a:hover { background: var(--panel); }
+.top li a[aria-current=page] { background: var(--panel); color: var(--accent); }
+

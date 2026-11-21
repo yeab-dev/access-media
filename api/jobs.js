@@ -95,10 +95,12 @@ export function jobsRouter({ jobsFile, dataDir }) {
   };
   const bad = (res, error, message, status = 400, extra = {}) => res.status(status).json({ error, message, ...extra });
 
-  // ?provider=<id> lists one provider's jobs (their id is in GET /api/v1/me).
+  // ?provider=<id> lists one provider's jobs (their id is in GET /api/v1/me); ?provider=host lists only the host's own.
   router.get('/jobs', async (req, res) => {
     let jobs = await all();
-    if (req.query.provider) jobs = jobs.filter((j) => j.owner === String(req.query.provider));
+    const who = req.query.provider ? String(req.query.provider) : '';
+    if (who === 'host') jobs = jobs.filter((j) => !j.owner);
+    else if (who) jobs = jobs.filter((j) => j.owner === who);
     res.json({ jobs: jobs.map((j) => shape(req, j)) });
   });
 

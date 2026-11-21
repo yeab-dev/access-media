@@ -4,9 +4,10 @@
 
 import express from 'express';
 import { generateKeyPairSync, createPrivateKey, createPublicKey, sign, verify, randomBytes } from 'node:crypto';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { requireStaff } from './sign.js';
+import { requireKey, ownerOf } from './auth.js';
 import { events } from './events.js';
 
 const ID = /^[A-Za-z0-9_-]{6,64}$/;
@@ -65,7 +66,7 @@ export function certificatesRouter({ dataDir, publicUrl }) {
     return { stored, payload, valid: !!payload && payload.jti === stored.credential.id };
   }
 
-  async function issue(req, { learnerName, achievement, issuedBy = null, id = b64(randomBytes(9)) }) {
+  async function issue(req, { learnerName, achievement, issuedBy = null, owner = null, id = b64(randomBytes(9)) }) {
     const now = new Date();
     const url = `${base(req)}/api/v1/certificates/${id}`;
     // The organisation that awards it, signed with this server's key.
@@ -92,7 +93,8 @@ export function certificatesRouter({ dataDir, publicUrl }) {
     // VC-JWT: the credential is the "vc" claim of a JWT signed by the issuer.
     const jwt = signJwt({ iss: issuer.id, jti: url, nbf: Math.floor(now / 1000), vc: credential }, (await keys).privateKey, kid(req));
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, `${id}.json`), JSON.stringify({ credential, jwt }, null, 2));
+    // owner: which provider issued it (null = the host), so each provider can list their own.
+    await writeFile(path.join(dir, `${id}.json`), JSON.stringify({ credential, jwt, owner }, null, 2));
     return { id, credential, jwt };
   }
 
@@ -104,10 +106,27 @@ export function certificatesRouter({ dataDir, publicUrl }) {
     if (!achievement?.name || typeof achievement.name !== 'string') {
       return res.status(400).json({ error: 'invalid_achievement', message: 'Give the achievement a name, for example the course or lesson title.' });
     }
-    const { id, credential, jwt } = await issue(req, { learnerName: learnerName.trim(), achievement, issuedBy: req.who.provider?.name });
+    const { id, credential, jwt } = await issue(req, { learnerName: learnerName.trim(), achievement, issuedBy: req.who.provider?.name, owner: ownerOf(req) });
     // No learner name in the webhook: the host already has it.
     events.emit('certificate.issued', { id, page: `${base(req)}/certificates/${id}`, achievement: achievement.name, owner: req.who.provider?.id ?? null });
     res.status(201).json({ id, page: `${base(req)}/certificates/${id}`, credential, jwt });
+  });
+
+  // Certificates this key has given (the master key: all). Newest first.
+  api.get('/me/certificates', requireKey, async (req, res) => {
+    const files = (await readdir(dir).catch(() => [])).filter((f) => f.endsWith('.json'));
+    const list = [];
+    for (const f of files) {
+      const c = await readFile(path.join(dir, f), 'utf8').then(JSON.parse).catch(() => null);
+      if (!c || !(req.who.admin || (c.owner && c.owner === req.who.provider?.id))) continue;
+      const id = f.slice(0, -5);
+      list.push({
+        id, page: `${base(req)}/certificates/${id}`, learnerName: c.credential.credentialSubject?.name,
+        achievement: c.credential.name, issued: c.credential.validFrom,
+      });
+    }
+    list.sort((a, b) => String(b.issued).localeCompare(String(a.issued)));
+    res.json({ certificates: list });
   });
 
   api.get('/certificates/:id', async (req, res) => {

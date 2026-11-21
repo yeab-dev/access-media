@@ -147,6 +147,8 @@ test('jobs: add with checks in words, list by provider, only the owner changes t
   const list = await (await call('GET', `/jobs?provider=${a.provider.id}`)).json();
   assert.deepEqual(list.jobs.map((j) => j.id), ['customer-service-assistant']);
   assert.ok((await (await call('GET', '/jobs')).json()).jobs.length >= 4, 'test jobs are still listed');
+  const host = (await (await call('GET', '/jobs?provider=host')).json()).jobs.map((j) => j.id);
+  assert.ok(host.includes('junior-frontend') && !host.includes('customer-service-assistant'), '?provider=host: only the host\'s own jobs');
 
   assert.equal((await call('PATCH', '/jobs/customer-service-assistant', { key: b.key, json: { city: 'Adama' } })).status, 403);
   assert.equal((await call('PATCH', '/jobs/junior-frontend', { key: a.key, json: { city: 'Adama' } })).status, 403, 'test jobs are read only');
@@ -181,6 +183,11 @@ test('webhooks: a provider hears only about its own lessons', async () => {
 
 test('certificates name the provider; a new key replaces the old one', async () => {
   const res = await call('POST', '/certificates', { key: a.key, json: { learnerName: 'Test Learner', achievement: { name: 'Getting your first job' } } });
+  const given = await res.clone().json();
+  const mine = (await (await call('GET', '/me/certificates', { key: a.key })).json()).certificates;
+  assert.deepEqual(mine.map((c) => [c.id, c.learnerName, c.achievement]), [[given.id, 'Test Learner', 'Getting your first job']]);
+  assert.equal((await (await call('GET', '/me/certificates', { key: b.key })).json()).certificates.length, 0, 'another provider does not see them');
+  assert.equal((await call('GET', '/me/certificates')).status, 401);
   assert.equal(res.status, 201);
   const cert = await res.json();
   assert.equal(cert.credential.issuer.name, 'Debo Learning (via Digital Bridge)');

@@ -38,9 +38,24 @@
   .links a { display: inline-flex; align-items: center; min-height: 44px; }
   section[hidden] { display: none; }
 </style>
+<link rel="stylesheet" href="/portal/header.css">
 </head>
 <body>
-<main>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/provider/">Your dashboard</a></li>
+        <li><a href="/provider/lessons">Your lessons</a></li>
+        <li><a href="/docs">Documentation</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main">
   <h1>Add a lesson</h1>
   <p class="lead">Upload a lesson video. The server makes it small enough for 3G phones and, when a speech model is set up, writes captions in the language spoken in the video. Then put one tag on your page.</p>
 
@@ -89,9 +104,10 @@
     <pre><code id="embed"></code></pre>
     <button type="button" id="copy">Copy the code</button>
     <ul class="links">
+      <li><a id="manage" href="/provider/lessons">Manage it on your dashboard</a> (titles, slides, documents)</li>
       <li><a id="watch" href="#">Watch the lesson</a></li>
       <li><a id="check" href="#">Check and correct the captions</a></li>
-      <li><a href="sign.html">Record sign language for it</a></li>
+      <li><a id="record" href="sign.html">Record sign language for it</a></li>
     </ul>
   </section>
 </main>
@@ -102,7 +118,7 @@ const api = `${location.origin}/api/v1`;
 const say = (text, kind = '') => { $('status').textContent = text; $('status').className = `status ${kind}`; };
 const esc = (s) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
-try { $('code').value = sessionStorage.getItem('studio-code') || ''; } catch {}
+try { $('code').value = (sessionStorage.getItem('studio-code') || localStorage.getItem('studio-code')) || ''; } catch {}
 $('code').addEventListener('change', () => { try { sessionStorage.setItem('studio-code', $('code').value); } catch {} });
 
 // Problems are said in words and focus goes to the first field that needs fixing.
@@ -174,6 +190,8 @@ function finish(lesson) {
   $('embed').innerHTML = esc(`<script type="module" src="${location.origin}/module/db-player.js"></` + `script>\n<db-player lesson="${lesson.id}"></db-player>`);
   $('watch').href = `/demo/?lesson=${encodeURIComponent(lesson.id)}`;
   $('check').href = `captions.html?lesson=${encodeURIComponent(lesson.id)}`;
+  $('manage').href = `/provider/lesson?id=${encodeURIComponent(lesson.id)}`;
+  $('record').href = `sign.html?lesson=${encodeURIComponent(lesson.id)}`;
   $('done').hidden = false;
   say(`“${lesson.title}” is ready.`, 'ok');
   $('done').focus();

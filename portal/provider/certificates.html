@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificates — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Certificates</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <p>When a learner finishes a course, give them a certificate. They get one link to send to employers. The page behind it checks the certificate is real and says “✓ Verified”, in English or Amharic, with no account needed. It is an Open Badges 3.0 credential with your organisation as the issuer.</p>
+
+    <section aria-labelledby="h-give">
+      <h2 id="h-give">Give a certificate</h2>
+      <form id="form" novalidate>
+        <label for="learner">Learner's name</label>
+        <input id="learner" type="text" maxlength="120" autocomplete="off" required aria-describedby="learner-hint">
+        <p class="hint" id="learner-hint">As the learner wants it shown to employers. Only the name and what they achieved are kept.</p>
+        <label for="achievement">What they achieved</label>
+        <input id="achievement" type="text" maxlength="200" required aria-describedby="achievement-hint">
+        <p class="hint" id="achievement-hint">The course or lesson, for example “Getting your first job”.</p>
+        <label for="description">Description (optional)</label>
+        <textarea id="description" maxlength="1000" aria-describedby="description-hint"></textarea>
+        <p class="hint" id="description-hint">What the course covers, for the employer.</p>
+        <div class="actions"><button class="btn" type="submit">Give the certificate</button></div>
+      </form>
+      <div id="given" class="card" hidden tabindex="-1">
+        <h3>The learner's link</h3>
+        <p>Send this link to the learner. They share it with employers.</p>
+        <p><a id="given-link" href="#"></a></p>
+        <button class="btn secondary" type="button" id="copy-given">Copy the link</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-list">
+      <h2 id="h-list">Certificates you have given</h2>
+      <ul class="items" id="list"></ul>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, copyText, say, date } from '/portal/provider.js';
+
+async function load() {
+  const { certificates } = await api('/me/certificates');
+  $('list').innerHTML = certificates.length ? certificates.map((c) => `<li>
+      <h3>${esc(c.learnerName)}</h3>
+      <p class="meta">${esc(c.achievement)} · ${esc(date(c.issued))}</p>
+      <div class="actions">
+        <a class="btn small secondary" href="${esc(c.page)}" aria-label="Open the check page: ${esc(c.learnerName)}">Open the check page</a>
+        <button class="btn small secondary" type="button" data-copy="${esc(c.page)}" aria-label="Copy the link: ${esc(c.learnerName)}">Copy the link</button>
+      </div></li>`).join('') : '<li>None yet.</li>';
+  for (const b of document.querySelectorAll('[data-copy]')) b.addEventListener('click', () => copyText(b.dataset.copy, 'Link copied.'));
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  for (const [id, text] of [['learner', 'Give the learner\'s name.'], ['achievement', 'Say what they achieved.']]) {
+    $(id).removeAttribute('aria-invalid');
+    if (!$(id).value.trim()) { $(id).setAttribute('aria-invalid', 'true'); say(text, 'bad'); $(id).focus(); return; }
+  }
+  const name = $('achievement').value.trim();
+  try {
+    const r = await api('/certificates', { method: 'POST', body: {
+      learnerName: $('learner').value.trim(),
+      achievement: { id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'course', name, description: $('description').value.trim() || name },
+    } });
+    $('given-link').href = r.page;
+    $('given-link').textContent = r.page;
+    $('given').hidden = false;
+    $('form').reset();
+    await load();
+    say(`Certificate given to ${r.credential.credentialSubject.name}.`, 'ok');
+    $('given').focus();
+  } catch (err) { say(err.message, 'bad'); }
+});
+$('copy-given').addEventListener('click', () => copyText($('given-link').href, 'Link copied. Send it to the learner.'));
+
+start('/provider/certificates', load);
+</script>
+</body>
+</html>

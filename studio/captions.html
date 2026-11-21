@@ -51,9 +51,24 @@
   .tools { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
   .tips { color: var(--muted); }
 </style>
+<link rel="stylesheet" href="/portal/header.css">
 </head>
 <body>
-<main>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/provider/">Your dashboard</a></li>
+        <li><a href="/provider/lessons">Your lessons</a></li>
+        <li><a href="/docs">Documentation</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main">
   <h1>Caption editor</h1>
   <p class="lead">Correct the words and the times of each caption line, then save to the lesson or download the WebVTT file. Works for captions and for audio description text.</p>
 
@@ -97,7 +112,7 @@ const api = `${location.origin}/api/v1`;
 let lesson = null, cues = [], lang = 'en', kind = 'captions';
 
 function say(text, kind = '') { $('status').className = `status ${kind}`; $('status').textContent = ''; setTimeout(() => { $('status').textContent = text; }, 30); }
-try { $('code').value = sessionStorage.getItem('studio-code') || ''; } catch {}
+try { $('code').value = (sessionStorage.getItem('studio-code') || localStorage.getItem('studio-code')) || ''; } catch {}
 $('code').addEventListener('change', () => { try { sessionStorage.setItem('studio-code', $('code').value); } catch {} loadLessons(); });
 // With a key: your own lessons (the master key: all). Without one: every lesson, to look at.
 async function listLessons() {
@@ -152,6 +167,7 @@ async function loadLessons() {
   if (!$('lesson').value) { say('You have no lessons yet. Add one on the "Add a lesson" page.'); return; }
   if (lesson?.id !== $('lesson').value) await chooseLesson();
 }
+let trackUsed = false;
 async function chooseLesson() {
   lesson = await (await fetch(`${api}/lessons/${$('lesson').value}`)).json();
   const v = $('video');
@@ -165,6 +181,10 @@ async function chooseLesson() {
     }
   }
   $('track').innerHTML = opts.join('');
+  // ?track=captions:am opens that track the first time (the dashboard links here).
+  const askedTrack = new URLSearchParams(location.search).get('track');
+  if (askedTrack && !trackUsed && [...$('track').options].some((o) => o.value === askedTrack)) $('track').value = askedTrack;
+  trackUsed = true;
   await chooseTrack();
 }
 async function chooseTrack() {

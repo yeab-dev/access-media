@@ -36,9 +36,24 @@
   input[type=range] { width: 100%; max-width: 32rem; min-height: 44px; accent-color: var(--accent); }
   ol.tips { padding-left: 1.25rem; }
 </style>
+<link rel="stylesheet" href="/portal/header.css">
 </head>
 <body>
-<main>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/provider/">Your dashboard</a></li>
+        <li><a href="/provider/lessons">Your lessons</a></li>
+        <li><a href="/docs">Documentation</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main">
   <h1>Sign language studio</h1>
   <p class="lead">For Ethiopian Sign Language interpreters. Record yourself signing a lesson. The recording is lined up with the lesson automatically and appears in the lesson's sign language window.</p>
 
@@ -100,7 +115,7 @@ let stream = null, recorder = null, chunks = [], blob = null, recStart = 0, less
 
 function say(text, kind = '') { statusEl.className = `status ${kind}`; statusEl.textContent = ''; setTimeout(() => { statusEl.textContent = text; }, 30); }
 
-try { $('code').value = sessionStorage.getItem('studio-code') || ''; } catch {}
+try { $('code').value = (sessionStorage.getItem('studio-code') || localStorage.getItem('studio-code')) || ''; } catch {}
 $('code').addEventListener('change', () => { try { sessionStorage.setItem('studio-code', $('code').value); } catch {} loadLessons(); });
 
 // With a key: your own lessons (the master key: all). Without one: every lesson, to look at.
@@ -131,7 +146,9 @@ async function loadLessons() {
     o.textContent = `${l.title}${n ? ` — ${n} learner${n === 1 ? '' : 's'} asked` : ''}${real ? ' (has signing)' : ''}`;
     $('lesson').append(o);
   }
-  if (keep && lessons.some((l) => l.id === keep)) $('lesson').value = keep;
+  // ?lesson=<id> opens that lesson (the dashboard links here).
+  const wanted = keep || new URLSearchParams(location.search).get('lesson');
+  if (wanted && lessons.some((l) => l.id === wanted)) $('lesson').value = wanted;
   if (shown !== $('lesson').value) showLesson();
 }
 let shown = null;

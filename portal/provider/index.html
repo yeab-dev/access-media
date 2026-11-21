@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your dashboard — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Your dashboard</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <h2>At a glance</h2>
+    <ul class="stats" id="stats"></ul>
+
+    <h2 id="h-todo">What needs your attention</h2>
+    <div id="todo"></div>
+
+    <h2>Put a lesson on your page</h2>
+    <div id="embed-box"></div>
+
+    <h2>Your tools</h2>
+    <ul class="grid">
+      <li><h3>Add a lesson</h3><p>Upload a video. It is made small for 3G phones and gets captions from its speech.</p><p><a href="/studio/lessons.html">Add a lesson</a></p></li>
+      <li><h3>Your lessons</h3><p>Titles in English and Amharic, captions, sign language, slides, documents and the code for each page.</p><p><a href="/provider/lessons">See your lessons</a></p></li>
+      <li><h3>Caption editor</h3><p>Correct the words and times of captions and audio description, in any language.</p><p><a href="/studio/captions.html">Open the caption editor</a></p></li>
+      <li><h3>Sign language studio</h3><p>An interpreter records in the browser while the lesson plays. Lessons learners asked for come first.</p><p><a href="/studio/sign.html">Open the sign language studio</a></p></li>
+      <li><h3>Jobs</h3><p>Job cards that read themselves aloud, for your learners.</p><p><a href="/provider/jobs">Manage jobs</a></p></li>
+      <li><h3>Certificates</h3><p>Give learners a link employers can check.</p><p><a href="/provider/certificates">Give a certificate</a></p></li>
+      <li><h3>Webhooks</h3><p>Tell your own system when a lesson is ready or captions change.</p><p><a href="/provider/webhooks">Manage webhooks</a></p></li>
+      <li><h3>API</h3><p>Everything here also works from your own code: every call, with “Try it out”.</p><p><a href="/docs">Read the documentation</a></p></li>
+    </ul>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, embedCode, copyText, langName } from '/portal/provider.js';
+
+start('/provider/', async (me) => {
+  const [lessons, jobs, certs, hooks, asked] = await Promise.all([
+    api('/me/lessons'),
+    me.admin ? api('/jobs') : api(`/jobs?provider=${encodeURIComponent(me.provider.id)}`),
+    api('/me/certificates'),
+    api('/webhooks'),
+    api('/sign-requests').catch(() => ({ requests: [] })),
+  ]);
+  const limit = (n, max) => (max ? `${n} of ${max}` : String(n));
+  const L = me.limits;
+  $('stats').innerHTML = [
+    ['Lessons', limit(lessons.lessons.length, L?.lessons), '/provider/lessons'],
+    ['Jobs', limit(jobs.jobs.length, L?.jobs), '/provider/jobs'],
+    ['Certificates given', String(certs.certificates.length), '/provider/certificates'],
+    ['Webhooks', limit(hooks.webhooks.length, L?.webhooks), '/provider/webhooks'],
+  ].map(([name, n, href]) => `<li><a href="${href}"><span class="n">${n}</span> ${name}</a></li>`).join('');
+
+  // What to do next, most important first: broken, waiting, then missing access features.
+  const wanted = Object.fromEntries((asked.requests || []).map((r) => [r.id, r.count]));
+  const todo = [];
+  for (const l of lessons.lessons) {
+    const t = esc(l.title);
+    const at = `/provider/lesson?id=${encodeURIComponent(l.id)}`;
+    if (l.status === 'failed') { todo.push([0, `<a href="${at}">${t}</a> could not be prepared: ${esc(l.statusMessage)}`]); continue; }
+    if (l.status !== 'ready') { todo.push([1, `<a href="${at}">${t}</a> is still being prepared: ${esc(l.statusMessage || '')}`]); continue; }
+    for (const c of l.captions.filter((c) => c.automatic)) {
+      todo.push([2, `${t}: the automatic ${langName(c.lang)} captions are not checked yet. <a href="/studio/captions.html?lesson=${encodeURIComponent(l.id)}&track=captions:${c.lang}">Check them</a>`]);
+    }
+    if (!l.captions.length) todo.push([2, `${t} has no captions. <a href="/studio/captions.html?lesson=${encodeURIComponent(l.id)}">Write captions</a>`]);
+    if (l.captions.length && !l.captions.some((c) => c.lang === 'am')) todo.push([3, `${t} has no Amharic captions. <a href="/studio/captions.html?lesson=${encodeURIComponent(l.id)}&track=captions:am">Add them</a>`]);
+    if (!l.signLanguage) {
+      const n = wanted[l.id];
+      todo.push([n ? 2 : 4, `${t} has no sign language${n ? ` (${n} learner${n === 1 ? '' : 's'} asked for it)` : ''}. <a href="/studio/sign.html?lesson=${encodeURIComponent(l.id)}">Record it</a>`]);
+    }
+    if (!l.audioDescription.length) todo.push([4, `${t} has no audio description for blind learners. <a href="/studio/captions.html?lesson=${encodeURIComponent(l.id)}&track=descriptions:en">Write it</a>`]);
+  }
+  todo.sort((a, b) => a[0] - b[0]);
+  if (!lessons.lessons.length) {
+    $('todo').innerHTML = '<p>You have no lessons yet. <a href="/studio/lessons.html">Add your first lesson</a>.</p>';
+  } else if (!todo.length) {
+    $('todo').innerHTML = '<p>Nothing is waiting: every lesson has checked captions, sign language and audio description.</p>';
+  } else {
+    const shown = todo.slice(0, 8);
+    $('todo').innerHTML = `<ul class="todo">${shown.map(([, html]) => `<li>${html}</li>`).join('')}</ul>
+      ${todo.length > shown.length ? `<p>And ${todo.length - shown.length} more on <a href="/provider/lessons">your lessons</a>.</p>` : ''}`;
+  }
+
+  const newest = lessons.lessons.find((l) => l.status === 'ready');
+  if (newest) {
+    $('embed-box').innerHTML = `<p>Paste these two lines where “${esc(newest.title)}” should play. Change the lesson name for your other lessons.</p>
+      <pre><code id="embed"></code></pre>
+      <button class="btn secondary" type="button" id="copy">Copy the code</button>`;
+    $('embed').textContent = embedCode(newest.id);
+    $('copy').addEventListener('click', () => copyText($('embed').textContent, 'Code copied. Paste it into your lesson page.'));
+  } else {
+    $('embed-box').innerHTML = '<p>When a lesson is ready, its code appears here.</p>';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Webhooks — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Webhooks</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <p>A webhook is an address on your own system. When something happens to one of your lessons or certificates, this server sends it a short message (a POST with JSON), so your system can react: publish a lesson when it is ready, tell an editor that captions changed, and so on.</p>
+
+    <section aria-labelledby="h-list">
+      <h2 id="h-list">Your webhooks</h2>
+      <p id="count" class="muted"></p>
+      <ul class="items" id="list"></ul>
+    </section>
+
+    <section aria-labelledby="h-add">
+      <h2 id="h-add">Add a webhook</h2>
+      <form id="form" novalidate>
+        <label for="url">Address to call</label>
+        <input id="url" type="url" required autocomplete="off" aria-describedby="url-hint">
+        <p class="hint" id="url-hint">Starts with https:// (http:// is fine for testing).</p>
+        <fieldset>
+          <legend>Tell me when</legend>
+          <div id="events"></div>
+        </fieldset>
+        <div class="actions"><button class="btn" type="submit">Add the webhook</button></div>
+      </form>
+      <div id="secret-box" class="card" hidden tabindex="-1">
+        <h3>Its secret</h3>
+        <p><strong>Copy it now: it is shown only once.</strong> Each message has a header <code>X-DB-Signature: sha256=…</code>, the HMAC-SHA256 of the body made with this secret. Check it to know the message came from us.</p>
+        <label for="secret">Secret</label>
+        <input id="secret" class="keybox" type="text" readonly>
+        <div class="actions"><button class="btn secondary" type="button" id="copy-secret">Copy the secret</button></div>
+      </div>
+    </section>
+
+    <details>
+      <summary>How to check a message (Node.js example)</summary>
+<pre><code>import { createHmac, timingSafeEqual } from 'node:crypto';
+// body: the raw request body (text), secret: the webhook's secret
+const expected = 'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
+const given = req.headers['x-db-signature'] || '';
+const ok = given.length === expected.length &amp;&amp; timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+// The body is { "event": "lesson.ready", "time": "…", "data": { "lesson": "…" } }</code></pre>
+    </details>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, copyText, say, date } from '/portal/provider.js';
+
+const WHAT = {
+  'lesson.ready': 'A lesson you uploaded is ready',
+  'captions.updated': 'Captions or audio description are saved',
+  'sign.recorded': 'A sign language video is saved',
+  'sign.requested': 'A learner asks for sign language',
+  'certificate.issued': 'You give a certificate',
+};
+let me;
+
+async function load() {
+  const { webhooks, events } = await api('/webhooks');
+  if (!$('events').firstChild) {
+    $('events').innerHTML = events.map((e) => `<label class="check"><input type="checkbox" name="event" value="${e}" checked> <span>${esc(WHAT[e] || e)} <code>${e}</code></span></label>`).join('');
+  }
+  $('count').textContent = me.limits ? `${webhooks.length} of ${me.limits.webhooks} webhooks.` : `${webhooks.length} webhooks.`;
+  $('list').innerHTML = webhooks.length ? webhooks.map((h) => `<li>
+      <h3><code>${esc(h.url)}</code></h3>
+      <p class="meta">Added ${esc(date(h.createdAt))}</p>
+      <p>Hears: ${h.events.map((e) => esc(WHAT[e] || e)).join('; ')}.</p>
+      <button class="btn small danger" type="button" data-delete="${esc(h.id)}" aria-label="Remove the webhook for ${esc(h.url)}">Remove</button></li>`).join('') : '<li>None yet.</li>';
+  for (const b of document.querySelectorAll('[data-delete]')) {
+    b.addEventListener('click', async () => {
+      if (!confirm('Remove this webhook? Your system stops hearing from us at that address.')) return;
+      try { await api(`/webhooks/${encodeURIComponent(b.dataset.delete)}`, { method: 'DELETE' }); await load(); say('Webhook removed.', 'ok'); $('h-list').tabIndex = -1; $('h-list').focus(); }
+      catch (err) { say(err.message, 'bad'); }
+    });
+  }
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = $('url').value.trim();
+  $('url').removeAttribute('aria-invalid');
+  if (!/^https?:\/\/\S+$/.test(url)) { $('url').setAttribute('aria-invalid', 'true'); say('Give the address to call, starting with https://.', 'bad'); $('url').focus(); return; }
+  const events = [...document.querySelectorAll('[name=event]:checked')].map((c) => c.value);
+  if (!events.length) { say('Choose at least one thing to hear about.', 'bad'); document.querySelector('[name=event]').focus(); return; }
+  try {
+    const h = await api('/webhooks', { method: 'POST', body: { url, events } });
+    $('secret').value = h.secret;
+    $('secret-box').hidden = false;
+    $('url').value = '';
+    await load();
+    say('Webhook added. Copy its secret now.', 'ok');
+    $('secret-box').focus();
+  } catch (err) { say(err.message, 'bad'); }
+});
+$('copy-secret').addEventListener('click', () => copyText($('secret').value, 'Secret copied. Keep it on your server.'));
+
+start('/provider/webhooks', async (who) => { me = who; await load(); });
+</script>
+</body>
+</html>
