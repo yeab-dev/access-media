@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your lessons — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Your lessons</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <p id="count" class="muted"></p>
+    <div class="actions"><a class="btn" href="/studio/lessons.html">Add a lesson</a></div>
+    <ul class="items" id="list"></ul>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, embedCode, copyText, langName, minutes } from '/portal/provider.js';
+
+const STATUS = { ready: ['Ready', 'ready'], processing: ['Being converted', 'busy'], captioning: ['Making captions', 'busy'], failed: ['Failed', 'failed'] };
+
+start('/provider/lessons', async () => {
+  const { lessons, limits } = await api('/me/lessons');
+  $('count').textContent = limits ? `${lessons.length} of ${limits.lessons} lessons. Videos up to ${limits.uploadMB} MB each.` : `${lessons.length} lessons (master key: all lessons on this server).`;
+  if (!lessons.length) {
+    $('list').outerHTML = '<p id="list">No lessons yet. Upload a video to make your first one.</p>';
+    return;
+  }
+  $('list').innerHTML = lessons.map((l) => {
+    const [label, kind] = STATUS[l.status] || [l.status, 'busy'];
+    const caps = l.captions.length
+      ? l.captions.map((c) => `${langName(c.lang)}${c.automatic ? ' (automatic, not checked)' : ''}`).join(', ')
+      : '';
+    const feat = (yes, text) => `<li class="${yes ? 'yes' : 'no'}">${text}${yes ? '' : ': none yet'}</li>`;
+    return `<li>
+      <h2><a href="/provider/lesson?id=${encodeURIComponent(l.id)}">${esc(l.title)}</a></h2>
+      <p class="meta"><span class="badge ${kind}">${label}</span> Spoken in ${esc(langName(l.lang))}${l.duration ? ` · ${minutes(l.duration)}` : ''} · Lesson name: <code>${esc(l.id)}</code></p>
+      ${l.status === 'failed' || (l.status !== 'ready' && l.statusMessage) ? `<p>${esc(l.statusMessage || '')}</p>` : ''}
+      <ul class="features" aria-label="Access features">
+        ${feat(l.captions.length, `Captions${caps ? `: ${esc(caps)}` : ''}`)}
+        ${feat(l.signLanguage, 'Sign language')}
+        ${feat(l.audioDescription.length, `Audio description${l.audioDescription.length ? `: ${l.audioDescription.map(langName).join(', ')}` : ''}`)}
+      </ul>
+      <div class="actions">
+        <a class="btn small" href="/provider/lesson?id=${encodeURIComponent(l.id)}" aria-label="Manage: ${esc(l.title)}">Manage</a>
+        ${l.status === 'ready' ? `<button class="btn small secondary" type="button" data-copy="${esc(l.id)}" aria-label="Copy page code: ${esc(l.title)}">Copy page code</button>` : ''}
+      </div>
+    </li>`;
+  }).join('');
+  for (const b of document.querySelectorAll('[data-copy]')) {
+    b.addEventListener('click', () => copyText(embedCode(b.dataset.copy), 'Code copied. Paste it into your lesson page.'));
+  }
+});
+</script>
+</body>
+</html>

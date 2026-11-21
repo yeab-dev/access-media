@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your jobs — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Your jobs</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <p>Job cards read their summary aloud (“Listen to summary”), work at 200% zoom, show dates in both calendars, and tell job search engines about the job (schema.org JobPosting).</p>
+    <p id="count" class="muted"></p>
+    <ul class="items" id="list"></ul>
+
+    <section aria-labelledby="h-form">
+      <h2 id="h-form" tabindex="-1">Add a job</h2>
+      <form id="form" novalidate>
+        <fieldset>
+          <legend>English</legend>
+          <label for="en-title">Job title</label>
+          <input id="en-title" type="text" maxlength="120" required>
+          <label for="en-summary">Summary in plain words</label>
+          <textarea id="en-summary" maxlength="1000" required aria-describedby="summary-hint"></textarea>
+          <p class="hint" id="summary-hint">What the work is, in two or three short sentences. It is read aloud to learners.</p>
+        </fieldset>
+        <fieldset lang="am">
+          <legend>አማርኛ (Amharic)</legend>
+          <label for="am-title">የሥራው መጠሪያ (Job title)</label>
+          <input id="am-title" type="text" maxlength="120">
+          <label for="am-summary">ማጠቃለያ (Summary)</label>
+          <textarea id="am-summary" maxlength="1000"></textarea>
+          <p class="hint" lang="en">Optional, but give both or neither. Learners who choose Amharic see this.</p>
+        </fieldset>
+        <fieldset>
+          <legend>The job</legend>
+          <label for="employer">Employer</label>
+          <input id="employer" type="text" maxlength="120" autocomplete="organization" required>
+          <label for="city">Town or city</label>
+          <input id="city" type="text" maxlength="80" required>
+          <label for="type">Kind of work</label>
+          <select id="type">
+            <option value="FULL_TIME">Full time</option>
+            <option value="PART_TIME">Part time</option>
+            <option value="CONTRACTOR">Contract</option>
+            <option value="TEMPORARY">Temporary</option>
+            <option value="INTERN">Internship</option>
+            <option value="VOLUNTEER">Volunteer</option>
+          </select>
+          <label for="closes">Closing date</label>
+          <input id="closes" type="date" required>
+          <label for="apply">Where to apply</label>
+          <input id="apply" type="url" required aria-describedby="apply-hint" autocomplete="off">
+          <p class="hint" id="apply-hint">A link (https://…) or an email address as mailto:jobs@example.com.</p>
+          <label class="check"><input type="checkbox" id="remote"> Can be done from home</label>
+        </fieldset>
+        <fieldset>
+          <legend>Support offered</legend>
+          <label class="check"><input type="checkbox" name="support" value="interpreter"> Sign language interpreter for interviews</label>
+          <label class="check"><input type="checkbox" name="support" value="remote"> Work from home</label>
+          <label class="check"><input type="checkbox" name="support" value="flexible-hours"> Flexible hours</label>
+          <label class="check"><input type="checkbox" name="support" value="screen-reader"> Screen reader friendly tools</label>
+          <label class="check"><input type="checkbox" name="support" value="step-free"> Step-free office</label>
+        </fieldset>
+        <div class="actions">
+          <button class="btn" type="submit" id="save">Add the job</button>
+          <button class="btn secondary" type="button" id="cancel" hidden>Stop editing</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, copyText, say, date } from '/portal/provider.js';
+
+let me;
+let jobs = [];
+let editing = null; // job id being changed, or null for a new job
+
+const cardCode = (id) => `<script type="module" src="${location.origin}/module/db-job-card.js"></` + `script>\n<db-job-card job="${id}"></db-job-card>`;
+
+async function load() {
+  ({ jobs } = me.admin ? await api('/jobs') : await api(`/jobs?provider=${encodeURIComponent(me.provider.id)}`));
+  $('count').textContent = me.limits ? `${jobs.length} of ${me.limits.jobs} jobs.` : `${jobs.length} jobs (master key: all jobs, including the read-only test jobs).`;
+  if (!jobs.length) { $('list').innerHTML = '<li>No jobs yet. Add one below.</li>'; return; }
+  if (!customElements.get('db-job-card')) import('/module/db-job-card.js');
+  $('list').innerHTML = jobs.map((j) => {
+    const title = j.en?.title || j.am?.title || j.id;
+    return `<li>
+      <h2>${esc(title)}</h2>
+      <p class="meta">${esc(j.employer)} · ${esc(j.city)} · closes ${esc(date(j.validThrough))}</p>
+      <details><summary aria-label="How it looks to learners: ${esc(title)}">How it looks to learners</summary>
+        <db-job-card job="${esc(j.id)}" heading-level="3"></db-job-card></details>
+      <div class="actions">
+        <button class="btn small" type="button" data-edit="${esc(j.id)}" aria-label="Change: ${esc(title)}">Change</button>
+        <button class="btn small secondary" type="button" data-copy="${esc(j.id)}" aria-label="Copy card code: ${esc(title)}">Copy card code</button>
+        <button class="btn small danger" type="button" data-delete="${esc(j.id)}" aria-label="Remove: ${esc(title)}">Remove</button>
+      </div></li>`;
+  }).join('');
+  for (const b of document.querySelectorAll('[data-copy]')) b.addEventListener('click', () => copyText(cardCode(b.dataset.copy), 'Code copied. Paste it where the job card should show.'));
+  for (const b of document.querySelectorAll('[data-edit]')) b.addEventListener('click', () => edit(b.dataset.edit));
+  for (const b of document.querySelectorAll('[data-delete]')) b.addEventListener('click', () => remove(b.dataset.delete));
+}
+
+function fill(j) {
+  $('en-title').value = j?.en?.title || '';
+  $('en-summary').value = j?.en?.summary || '';
+  $('am-title').value = j?.am?.title || '';
+  $('am-summary').value = j?.am?.summary || '';
+  $('employer').value = j?.employer || (me.admin ? '' : me.provider.name);
+  $('city').value = j?.city || '';
+  $('type').value = j?.employmentType || 'FULL_TIME';
+  $('closes').value = j?.validThrough || '';
+  $('apply').value = j?.apply || '';
+  $('remote').checked = !!j?.remote;
+  for (const c of document.querySelectorAll('[name=support]')) c.checked = (j?.support || []).includes(c.value);
+  for (const el of $('form').querySelectorAll('[aria-invalid]')) el.removeAttribute('aria-invalid');
+}
+
+function edit(id) {
+  const j = jobs.find((x) => x.id === id);
+  editing = id;
+  fill(j);
+  $('h-form').textContent = `Change: ${j.en?.title || j.am?.title || id}`;
+  $('save').textContent = 'Save changes';
+  $('cancel').hidden = false;
+  $('h-form').focus();
+}
+function stopEditing() {
+  editing = null;
+  fill(null);
+  $('h-form').textContent = 'Add a job';
+  $('save').textContent = 'Add the job';
+  $('cancel').hidden = true;
+}
+$('cancel').addEventListener('click', () => { stopEditing(); say('Stopped editing. Nothing was changed.'); $('h-form').focus(); });
+
+async function remove(id) {
+  const j = jobs.find((x) => x.id === id);
+  if (!confirm(`Remove “${j.en?.title || id}”? Its card stops showing on every page.`)) return;
+  try {
+    await api(`/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (editing === id) stopEditing();
+    await load();
+    say('Job removed.', 'ok');
+    $('h-form').focus();
+  } catch (err) { say(err.message, 'bad'); }
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  // Problems are said in words, and focus goes to the first field to fix.
+  const need = [['en-title', 'Give the job title in English.'], ['en-summary', 'Write a short summary in English.'], ['employer', 'Give the employer\'s name.'],
+    ['city', 'Give the town or city.'], ['closes', 'Give the closing date.'], ['apply', 'Say where to apply: a link or mailto: address.']];
+  for (const el of $('form').querySelectorAll('[aria-invalid]')) el.removeAttribute('aria-invalid');
+  for (const [id, text] of need) {
+    if (!$(id).value.trim()) { $(id).setAttribute('aria-invalid', 'true'); say(text, 'bad'); $(id).focus(); return; }
+  }
+  if (!/^(https?:\/\/|mailto:)\S+$/.test($('apply').value.trim())) { $('apply').setAttribute('aria-invalid', 'true'); say('Where to apply must start with https:// or mailto:.', 'bad'); $('apply').focus(); return; }
+  const amT = $('am-title').value.trim(); const amS = $('am-summary').value.trim();
+  if (!!amT !== !!amS) { const f = amT ? 'am-summary' : 'am-title'; $(f).setAttribute('aria-invalid', 'true'); say('For Amharic, give both the title and the summary, or neither.', 'bad'); $(f).focus(); return; }
+  const body = {
+    en: { title: $('en-title').value.trim(), summary: $('en-summary').value.trim() },
+    ...(amT ? { am: { title: amT, summary: amS } } : {}),
+    employer: $('employer').value.trim(), city: $('city').value.trim(), employmentType: $('type').value,
+    validThrough: $('closes').value, apply: $('apply').value.trim(), remote: $('remote').checked,
+    support: [...document.querySelectorAll('[name=support]:checked')].map((c) => c.value),
+  };
+  try {
+    if (editing) {
+      await api(`/jobs/${encodeURIComponent(editing)}`, { method: 'PATCH', body });
+      say(`“${body.en.title}” saved.`, 'ok');
+    } else {
+      await api('/jobs', { method: 'POST', body });
+      say(`“${body.en.title}” added. Its card is in the list above.`, 'ok');
+    }
+    stopEditing();
+    await load();
+  } catch (err) { say(err.message, 'bad'); }
+});
+
+start('/provider/jobs', async (who) => { me = who; fill(null); await load(); });
+</script>
+</body>
+</html>

@@ -89,7 +89,8 @@
 
     <script type="module">
       // The host decides how jobs are listed; each one is a <db-job-card>, plus JSON-LD for job search engines.
-      const jobs = (await (await fetch('/api/v1/jobs')).json()).jobs;
+      // Only the host's own jobs: jobs added by other providers' keys belong on their own sites.
+      const jobs = (await (await fetch('/api/v1/jobs?provider=host')).json()).jobs;
       const list = document.getElementById('jobs');
       for (const job of jobs) {
         const card = document.createElement('db-job-card');

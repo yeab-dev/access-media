@@ -18,13 +18,14 @@ Around it: a recording studio for sign language interpreters, a caption editor, 
 |---|---|
 | [Home for lesson providers](https://access-media-rsi0.onrender.com/) | what you can do, in three steps |
 | [Get your key](https://access-media-rsi0.onrender.com/get-key) | an API key and a practice lesson in ten seconds |
+| [Your dashboard](https://access-media-rsi0.onrender.com/provider/) | sign in with the key: lessons, captions, sign language, slides, jobs, certificates, webhooks, key |
 | [Documentation](https://access-media-rsi0.onrender.com/docs) | step-by-step guide and every call with "Try it out" |
 | [Example site: Savanna](https://access-media-rsi0.onrender.com/savanna/pages/concept-with-navigation.html) · [jobs](https://access-media-rsi0.onrender.com/savanna/pages/jobs.html) | the player and job cards inside the ALX learning platform (Level 1 install) |
 | [Player on a blank page](https://access-media-rsi0.onrender.com/demo/blank.html) | no other styles |
 
 ## For lesson providers: start here
 
-1. **Get your key** at `/get-key`: type your organisation's name, copy the key. It comes with a practice lesson that is yours.
+1. **Get your key** at `/get-key`: type your organisation's name, copy the key. It comes with a practice lesson that is yours. Then sign in to **your dashboard** at `/provider/`: everything below is reachable from there.
 2. **Add a lesson** at `/studio/lessons.html` (or `POST /api/v1/lessons`): upload a video; captions are written from the speech.
 3. **Paste two lines** where the lesson should play:
    ```html
@@ -51,6 +52,7 @@ Open **http://localhost:8080**.
 |---|---|
 | `/` | For lesson providers: what you can do, in three steps |
 | `/get-key` | Get your API key (organisation name only) |
+| `/provider/` | Provider dashboard (sign in with the key): what needs attention, lessons (`/provider/lessons`, one lesson at `/provider/lesson?id=…`: preview, page code, titles EN/AM, tracks, sign language, slides and picture descriptions, documents, delete), `/provider/jobs`, `/provider/certificates`, `/provider/webhooks`, `/provider/key` (new key, sign out) |
 | `/docs` | Documentation: a step-by-step guide and every call with "Try it out" |
 | `/demo/blank.html` | The player on an empty page: no Bootstrap, no Savanna CSS, attributes only |
 | `/savanna/pages/concept-with-navigation.html` | The example site: inside Savanna, under the lesson banner |

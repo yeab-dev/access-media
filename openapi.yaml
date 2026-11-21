@@ -638,7 +638,7 @@ paths:
       tags: [5. Jobs and certificates]
       summary: All jobs (public)
       parameters:
-        - { name: provider, in: query, description: 'Only one provider''s jobs: your id is in GET /api/v1/me.', schema: { type: string } }
+        - { name: provider, in: query, description: 'Only one provider''s jobs: your id is in GET /api/v1/me. `host` lists only the host''s own jobs.', schema: { type: string } }
       responses:
         '200': { description: Jobs, content: { application/json: { schema: { type: object, properties: { jobs: { type: array, items: { $ref: '#/components/schemas/Job' } } } } } } }
     post:
@@ -736,6 +736,16 @@ paths:
       responses:
         '201': { description: Given, content: { application/json: { example: { id: Xk3p9QaB2c, page: https://THIS-SERVER/certificates/Xk3p9QaB2c, credential: { type: [VerifiableCredential, OpenBadgeCredential] }, jwt: eyJhbGciOiJFZERTQSI… } } } }
         '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorised' }
+
+  /api/v1/me/certificates:
+    get:
+      tags: [5. Jobs and certificates]
+      summary: Certificates you have given
+      description: Newest first. The master key lists all of them. Each `page` is the link the learner shares with employers.
+      security: [{ apiKey: [] }]
+      responses:
+        '200': { description: Your certificates, content: { application/json: { example: { certificates: [{ id: Xk3p9QaB2c, page: https://THIS-SERVER/certificates/Xk3p9QaB2c, learnerName: Abebe Kebede, achievement: Getting your first job, issued: '2026-11-21T09:30:00.000Z' }] } } } }
         '401': { $ref: '#/components/responses/Unauthorised' }
 
   /api/v1/certificates/{id}:

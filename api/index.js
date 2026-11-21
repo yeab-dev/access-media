@@ -51,6 +51,9 @@ const portal = (file) => (_req, res) => res.set('Cache-Control', 'no-cache').sen
 app.get('/', portal('index.html'));
 app.get('/get-key', portal('get-key.html'));
 app.use('/portal', express.static(path.join(ROOT, 'portal'), revalidate));
+// The provider dashboard: /provider/, /provider/lessons, /provider/lesson?id=… (one sign-in with the key for all pages).
+app.use('/provider', express.static(path.join(ROOT, 'portal', 'provider'), { ...revalidate, extensions: ['html'] }));
+app.get('/dashboard', (_req, res) => res.redirect(301, '/provider/'));
 // The example site is the Savanna page; old links to the removed Debo example site go there.
 app.use('/debo', (_req, res) => res.redirect(301, '/savanna/pages/concept-with-navigation.html'));
 

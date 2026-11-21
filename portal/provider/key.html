@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your key — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Your key</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <dl id="facts"></dl>
+
+    <section aria-labelledby="h-device">
+      <h2 id="h-device">This browser</h2>
+      <label class="check"><input type="checkbox" id="remember"> Remember my key on this device</label>
+      <p class="hint">Off: the key is forgotten when you close this tab. Leave it off on a shared computer.</p>
+    </section>
+
+    <section aria-labelledby="h-new" id="new-box">
+      <h2 id="h-new">Make a new key</h2>
+      <p>Do this if someone else may have seen your key. The old key stops working at once: change it everywhere your own code uses it.</p>
+      <button class="btn danger" type="button" id="rotate">Make a new key</button>
+      <div id="new-key" class="card" hidden tabindex="-1">
+        <h3>Your new key</h3>
+        <p><strong>Copy it now and keep it safe: it is shown only once.</strong></p>
+        <label for="key">New API key</label>
+        <input id="key" class="keybox" type="text" readonly>
+        <div class="actions"><button class="btn secondary" type="button" id="copy">Copy the key</button></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-use">
+      <h2 id="h-use">Using your key from your own code</h2>
+      <p>Send it in a header with every call that changes something:</p>
+      <pre><code id="curl"></code></pre>
+      <p>Every call, with examples and “Try it out”, is in the <a href="/docs">documentation</a>.</p>
+    </section>
+
+    <section aria-labelledby="h-data">
+      <h2 id="h-data">What we keep about you</h2>
+      <p>Only your organisation's name and a scrambled form of your key (a SHA-256 hash), never the key itself. That is why a lost key cannot be shown again.</p>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, copyText, say, date, getKey, setKey, remembered } from '/portal/provider.js';
+
+start('/provider/key', async (me) => {
+  const L = me.limits;
+  $('facts').innerHTML = me.admin
+    ? '<dt>Key</dt><dd>The host\'s master key (ADMIN_TOKEN in the server\'s settings). It can change everything; change it in the server settings.</dd>'
+    : `<dt>Organisation</dt><dd>${esc(me.provider.name)}</dd>
+       <dt>Key</dt><dd>Ends with <code>${esc(me.keyEndsWith)}</code></dd>
+       <dt>Since</dt><dd>${esc(date(me.createdAt))}</dd>
+       <dt>Limits on this server</dt><dd>${L.lessons} lessons, videos up to ${L.uploadMB} MB, ${L.jobs} jobs, ${L.webhooks} webhooks</dd>`;
+  $('new-box').hidden = !!me.admin;
+  $('remember').checked = remembered();
+  $('curl').textContent = `curl -H "Authorization: Bearer YOUR_KEY" ${location.origin}/api/v1/me/lessons`;
+});
+
+$('remember').addEventListener('change', () => {
+  setKey(getKey(), $('remember').checked);
+  say($('remember').checked ? 'This device now remembers your key.' : 'This device will forget your key when you close the tab.', 'ok');
+});
+
+$('rotate').addEventListener('click', async () => {
+  if (!confirm('Make a new key? The old one stops working at once.')) return;
+  try {
+    const r = await api('/me/key', { method: 'POST' });
+    setKey(r.key, remembered());
+    $('key').value = r.key;
+    $('new-key').hidden = false;
+    say('New key made. The old key no longer works. Copy the new one now.', 'ok');
+    $('new-key').focus();
+  } catch (err) { say(err.message, 'bad'); }
+});
+$('copy').addEventListener('click', () => copyText($('key').value, 'Key copied. Keep it somewhere safe, like a password manager.'));
+</script>
+</body>
+</html>

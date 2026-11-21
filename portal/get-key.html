@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Get your API key — Digital Bridge learning media</title>
 <link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -15,6 +16,7 @@
       <ul>
         <li><a href="/">Home</a></li>
         <li><a href="/get-key" aria-current="page">Get your key</a></li>
+        <li><a href="/provider/">Your dashboard</a></li>
         <li><a href="/docs">Documentation</a></li>
         <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
       </ul>
@@ -37,7 +39,7 @@
 
   <section id="done" aria-labelledby="h-done" hidden tabindex="-1">
     <h2 id="h-done">Your key</h2>
-    <p><strong>Copy it now and keep it safe: it is shown only once.</strong> Anyone with it can change your lessons. Lost it? Make a new one in the <a href="/docs#/1.%20Get%20started">documentation</a> (“Make a new key”) while you still have the old one, or get a new key here.</p>
+    <p><strong>Copy it now and keep it safe: it is shown only once.</strong> Anyone with it can change your lessons. Lost it? Make a new one on your dashboard's <a href="/provider/key">Your key</a> page while you still have the old one, or get a new key here.</p>
     <label for="key">API key</label>
     <input id="key" class="keybox" type="text" readonly>
     <div class="actions">
@@ -53,6 +55,8 @@
     </div>
 
     <h3>Next</h3>
+    <p><a class="btn" href="/provider/">Open your dashboard</a></p>
+    <p>Everything for your lessons is there. Or go straight to:</p>
     <ul>
       <li><a id="next-captions" href="/studio/captions.html">Correct the practice lesson's captions</a></li>
       <li><a href="/studio/lessons.html">Add your own lesson (upload a video)</a></li>
@@ -63,11 +67,7 @@
 
   <section aria-labelledby="h-have">
     <h2 id="h-have">Already have a key?</h2>
-    <form id="check-form" novalidate>
-      <label for="have">Paste your key</label>
-      <input id="have" type="password" autocomplete="off" spellcheck="false">
-      <div class="actions"><button class="btn secondary" type="submit">Use this key</button></div>
-    </form>
+    <p><a href="/provider/">Sign in to your dashboard</a> with it.</p>
   </section>
 </main>
 
@@ -115,16 +115,6 @@ async function copy(text, done) {
 $('copy').addEventListener('click', () => copy($('key').value, 'Key copied. Keep it somewhere safe, like a password manager.'));
 $('copy-embed').addEventListener('click', () => copy($('practice-embed').textContent, 'Code copied. Paste it into your lesson page.'));
 
-$('check-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const key = $('have').value.trim();
-  if (!key) { say('Paste your key first.', 'bad'); $('have').focus(); return; }
-  const res = await fetch('/api/v1/me', { headers: { Authorization: `Bearer ${key}` } });
-  if (!res.ok) { say('That key does not work on this server. Check it, or get a new one above.', 'bad'); return; }
-  const me = await res.json();
-  remember(key);
-  say(`This key belongs to ${me.admin ? 'the host (master key)' : me.provider.name}. This tab will use it in the studio pages and the documentation.`, 'ok');
-});
 </script>
 </body>
 </html>

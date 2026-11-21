@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson — Digital Bridge learning media</title>
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/header.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="/">Digital Bridge learning media</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/get-key">Get your key</a></li>
+        <li><a href="/provider/" aria-current="page">Your dashboard</a></li>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/savanna/pages/concept-with-navigation.html">Example site</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1 id="title">Lesson</h1>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <p class="meta" id="meta"></p>
+    <p><a href="/provider/lessons">All your lessons</a></p>
+
+    <section aria-labelledby="h-preview" id="preview-box">
+      <h2 id="h-preview">How learners see it</h2>
+      <div class="preview" id="preview"></div>
+    </section>
+
+    <section aria-labelledby="h-embed" id="embed-box">
+      <h2 id="h-embed">Put it on your page</h2>
+      <p>Paste these two lines where the lesson should play. Nothing else is needed on your page.</p>
+      <pre><code id="embed"></code></pre>
+      <button class="btn secondary" type="button" id="copy-embed">Copy the code</button>
+    </section>
+
+    <section aria-labelledby="h-name">
+      <h2 id="h-name">Name and language</h2>
+      <form id="name-form" novalidate>
+        <label for="t-en">Title</label>
+        <input id="t-en" type="text" maxlength="200" required>
+        <label for="t-am">Title in Amharic <span lang="am">(አማርኛ)</span></label>
+        <input id="t-am" type="text" maxlength="200" lang="am" aria-describedby="t-am-hint">
+        <p class="hint" id="t-am-hint">Shown when the learner chooses Amharic. Leave empty to use the title above.</p>
+        <label for="spoken">Language spoken in the video</label>
+        <select id="spoken">
+          <option value="en">English</option>
+          <option value="am" lang="am">አማርኛ (Amharic)</option>
+          <option value="om" lang="om">Afaan Oromoo (Oromo)</option>
+          <option value="ti" lang="ti">ትግርኛ (Tigrinya)</option>
+        </select>
+        <div class="actions"><button class="btn" type="submit">Save name and language</button></div>
+      </form>
+    </section>
+
+    <section aria-labelledby="h-tracks">
+      <h2 id="h-tracks">Captions and audio description</h2>
+      <p>Captions are for learners who cannot hear. Audio description says what is on screen, for learners who cannot see.</p>
+      <ul class="items" id="tracks"></ul>
+      <p><a class="btn secondary" id="open-editor" href="/studio/captions.html">Open the caption editor</a></p>
+    </section>
+
+    <section aria-labelledby="h-sign">
+      <h2 id="h-sign">Ethiopian Sign Language</h2>
+      <p id="sign-state"></p>
+      <p><a class="btn secondary" id="open-sign" href="/studio/sign.html">Open the sign language studio</a></p>
+    </section>
+
+    <section aria-labelledby="h-slides">
+      <h2 id="h-slides">Slides and picture descriptions</h2>
+      <p>If the video shows slides or pictures, say when each one appears, give it a short title and describe what it shows. The lesson's web page and PDF get one section per slide, with your description as the picture's text for screen readers.</p>
+      <form id="slides-form" novalidate>
+        <p class="hint" id="time-hint">Times are minutes and seconds, for example 1:05, or just seconds. Play the preview above and use “Use the video's time” to catch the moment a slide appears.</p>
+        <div id="slides"></div>
+        <p id="slides-empty" class="muted">No slides yet. Without slides, the documents use the audio description to make sections.</p>
+        <div class="actions">
+          <button class="btn secondary" type="button" id="add-slide">Add a slide</button>
+          <button class="btn" type="submit">Save slides</button>
+        </div>
+      </form>
+    </section>
+
+    <section aria-labelledby="h-docs">
+      <h2 id="h-docs">Documents and downloads</h2>
+      <p>Made from the captions, descriptions and slides, and updated when you change them. Learners find them under the player too.</p>
+      <ul id="docs"></ul>
+    </section>
+
+    <section aria-labelledby="h-delete">
+      <h2 id="h-delete">Delete this lesson</h2>
+      <p>Removes the video, captions, sign language, documents and offline pack. Pages that show it will say it is not found. This cannot be undone.</p>
+      <button class="btn danger" type="button" id="delete">Delete this lesson</button>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { start, api, $, esc, embedCode, copyText, langName, minutes, say } from '/portal/provider.js';
+
+const id = new URLSearchParams(location.search).get('id') || '';
+const enc = encodeURIComponent(id);
+let lesson;
+
+/** "1:05", "65" or "65.5" → seconds; NaN if not a time. */
+function parseTime(text) {
+  const t = String(text).trim().replace(',', '.');
+  if (/^\d+(\.\d+)?$/.test(t)) return Number(t);
+  const m = t.match(/^(\d+):([0-5]?\d(?:\.\d+)?)$/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+}
+const showTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}${s % 1 ? String((s % 1).toFixed(1)).slice(1) : ''}`;
+
+start('/provider/lessons', async (me) => {
+  if (!id) { $('content').innerHTML = '<p>No lesson chosen. <a href="/provider/lessons">Choose one of your lessons</a>.</p>'; return; }
+  try {
+    lesson = await api(`/lessons/${enc}`);
+  } catch (err) {
+    $('content').innerHTML = `<p>${esc(err.message)} <a href="/provider/lessons">See your lessons</a>.</p>`;
+    return;
+  }
+  if (!me.admin && lesson.owner !== me.provider.id) {
+    $('content').innerHTML = '<p>This lesson belongs to another provider, so your key cannot change it. <a href="/provider/lessons">See your lessons</a>.</p>';
+    return;
+  }
+  render();
+  await loadSlides();
+});
+
+function render() {
+  const l = lesson;
+  document.title = `${l.title} — Digital Bridge learning media`;
+  $('title').textContent = l.title;
+  const status = { ready: 'Ready', processing: 'Being converted', captioning: 'Making captions', failed: 'Failed' }[l.status || 'ready'];
+  $('meta').textContent = `${status}${l.statusMessage && l.status !== 'ready' ? `: ${l.statusMessage}` : ''} · Spoken in ${langName(l.lang)}${l.duration ? ` · ${minutes(l.duration)}` : ''} · Lesson name: ${l.id}`;
+  const ready = !l.status || l.status === 'ready';
+
+  // Preview: the real player, as learners get it.
+  $('preview-box').hidden = !ready;
+  $('embed-box').hidden = !ready;
+  if (ready && !$('preview').firstChild) {
+    if (!customElements.get('db-player')) import('/module/db-player.js');
+    const p = document.createElement('db-player');
+    p.setAttribute('lesson', l.id);
+    p.setAttribute('label', `Preview: ${l.title}`);
+    $('preview').append(p);
+  }
+  $('embed').textContent = embedCode(l.id);
+
+  $('t-en').value = l.title;
+  $('t-am').value = l.titles?.am || '';
+  if (![...$('spoken').options].some((o) => o.value === l.lang)) $('spoken').add(new Option(langName(l.lang), l.lang));
+  $('spoken').value = l.lang;
+
+  // Tracks: each existing one, plus the usual ones still missing.
+  const rows = [];
+  const kinds = { captions: 'Captions', descriptions: 'Audio description' };
+  const have = (l.tracks || []).filter((t) => kinds[t.kind]);
+  for (const t of have) {
+    const state = t.auto ? 'Automatic: not checked yet' : t.reviewed === false ? 'Not reviewed yet' : 'Checked';
+    rows.push(`<li><h3>${kinds[t.kind]}: ${esc(langName(t.srclang))}</h3><p class="meta">${state}</p>
+      <a href="/studio/captions.html?lesson=${enc}&track=${t.kind}:${t.srclang}" aria-label="${t.auto ? 'Check and correct' : 'Edit'} ${kinds[t.kind].toLowerCase()} in ${esc(langName(t.srclang))}">${t.auto ? 'Check and correct' : 'Edit'}</a></li>`);
+  }
+  for (const k of Object.keys(kinds)) {
+    for (const lang of ['en', 'am']) {
+      if (have.some((t) => t.kind === k && t.srclang === lang)) continue;
+      rows.push(`<li><h3>${kinds[k]}: ${langName(lang)}</h3><p class="meta">None yet</p>
+        <a href="/studio/captions.html?lesson=${enc}&track=${k}:${lang}" aria-label="Write it: ${kinds[k].toLowerCase()} in ${langName(lang)}">Write it</a></li>`);
+    }
+  }
+  $('tracks').innerHTML = rows.join('');
+  $('open-editor').href = `/studio/captions.html?lesson=${enc}`;
+
+  const sign = l.sign?.src && !l.sign.placeholder;
+  $('sign-state').textContent = sign
+    ? 'This lesson has a sign language video. Learners can move and resize its window. Record again to replace it (the previous one is kept on the server).'
+    : 'No sign language video yet. Learners who need one see a message, and can ask for it.';
+  api('/sign-requests').then(({ requests }) => {
+    const n = requests.find((r) => r.id === l.id)?.count;
+    if (n && !sign) $('sign-state').textContent += ` ${n} learner${n === 1 ? ' has' : 's have'} asked for it.`;
+  }).catch(() => {});
+  $('open-sign').href = `/studio/sign.html?lesson=${enc}`;
+
+  const docs = [];
+  for (const lang of new Set(['en', 'am', ...(l.tracks || []).filter((t) => t.kind === 'captions').map((t) => t.srclang)])) {
+    const name = langName(lang);
+    docs.push(`<li>${esc(name)}: <a href="${l.links.document}?lang=${lang}&format=html" hreflang="${lang}">web page</a>,
+      <a href="${l.links.document}?lang=${lang}&format=pdf" hreflang="${lang}">tagged PDF</a>,
+      <a href="${l.links.transcript}?lang=${lang}&format=txt" hreflang="${lang}">transcript (text)</a></li>`);
+  }
+  docs.push(`<li><a href="${l.links.offlinePack}">Offline pack</a> (small audio, transcript and a light web page, for slow phones)</li>`);
+  $('docs').innerHTML = docs.join('');
+}
+
+// ---------- name ----------
+$('name-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = $('t-en').value.trim();
+  if (!title) { $('t-en').setAttribute('aria-invalid', 'true'); say('Give the lesson a title.', 'bad'); $('t-en').focus(); return; }
+  $('t-en').removeAttribute('aria-invalid');
+  try {
+    const r = await api(`/lessons/${enc}`, { method: 'PATCH', body: { title, titles: { am: $('t-am').value.trim() || null }, lang: $('spoken').value } });
+    Object.assign(lesson, r);
+    render();
+    say('Name and language saved. Learners see the new title at once.', 'ok');
+  } catch (err) { say(err.message, 'bad'); }
+});
+
+// ---------- slides ----------
+const LANGS = [['en', 'English', ''], ['am', 'Amharic', 'am']];
+function slideBox(s = { time: 0 }) {
+  const box = document.createElement('fieldset');
+  box.className = 'slide';
+  box.innerHTML = `<legend></legend>
+    <div class="time">
+      <div><label>Appears at</label><input type="text" inputmode="decimal" data-f="time" autocomplete="off"></div>
+      <button class="btn small secondary" type="button" data-now>Use the video's time</button>
+    </div>
+    <div class="cols">${LANGS.map(([code, name, lang]) => `<div${lang ? ` lang="${lang}"` : ''}>
+      <label data-for="${code}.title">Title (${name})</label><input type="text" maxlength="200" data-f="${code}.title">
+      <label data-for="${code}.alt">What the picture shows (${name})</label><textarea maxlength="1000" data-f="${code}.alt"></textarea>
+    </div>`).join('')}</div>
+    <button class="btn small danger" type="button" data-remove></button>`;
+  box.querySelector('[data-f=time]').value = showTime(s.time || 0);
+  for (const [code] of LANGS) {
+    box.querySelector(`[data-f="${code}.title"]`).value = s[code]?.title || '';
+    box.querySelector(`[data-f="${code}.alt"]`).value = s[code]?.alt || '';
+  }
+  box.querySelector('[data-now]').addEventListener('click', () => {
+    const t = document.querySelector('db-player')?.currentTime || 0;
+    box.querySelector('[data-f=time]').value = showTime(Math.floor(t * 10) / 10);
+    say(`Set to ${showTime(Math.floor(t))}, where the preview video is now.`);
+  });
+  box.querySelector('[data-remove]').addEventListener('click', () => {
+    const next = box.nextElementSibling || box.previousElementSibling;
+    box.remove();
+    numberSlides();
+    say('Slide removed. Save slides to keep the change.');
+    (next?.querySelector('input') || $('add-slide')).focus();
+  });
+  return box;
+}
+function numberSlides() {
+  const boxes = [...$('slides').children];
+  boxes.forEach((box, i) => {
+    const n = i + 1;
+    box.querySelector('legend').textContent = `Slide ${n}`;
+    box.querySelector('[data-remove]').textContent = `Remove slide ${n}`;
+    box.querySelector('[data-now]').setAttribute('aria-label', `Use the video's time for slide ${n}`);
+    for (const input of box.querySelectorAll('[data-f]')) {
+      input.id = `s${n}-${input.dataset.f.replace('.', '-')}`;
+      const label = box.querySelector(`[data-for="${input.dataset.f}"]`) || input.previousElementSibling;
+      label.htmlFor = input.id;
+    }
+    box.querySelector('[data-f=time]').setAttribute('aria-describedby', 'time-hint');
+  });
+  $('slides-empty').hidden = boxes.length > 0;
+}
+async function loadSlides() {
+  const { slides } = await api(`/lessons/${enc}/slides`);
+  $('slides').replaceChildren(...slides.map(slideBox));
+  numberSlides();
+}
+$('add-slide').addEventListener('click', () => {
+  const last = [...$('slides').children].pop();
+  const after = last ? parseTime(last.querySelector('[data-f=time]').value) + 10 : 0;
+  const box = slideBox({ time: Number.isFinite(after) ? after : 0 });
+  $('slides').append(box);
+  numberSlides();
+  box.querySelector('[data-f=time]').focus();
+});
+$('slides-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const slides = [];
+  for (const [i, box] of [...$('slides').children].entries()) {
+    const timeInput = box.querySelector('[data-f=time]');
+    const time = parseTime(timeInput.value);
+    if (!Number.isFinite(time)) { timeInput.setAttribute('aria-invalid', 'true'); say(`Slide ${i + 1}: write when it appears, for example 1:05.`, 'bad'); timeInput.focus(); return; }
+    timeInput.removeAttribute('aria-invalid');
+    const s = { time };
+    for (const [code] of LANGS) {
+      const title = box.querySelector(`[data-f="${code}.title"]`).value.trim();
+      const alt = box.querySelector(`[data-f="${code}.alt"]`).value.trim();
+      if (title || alt) s[code] = { ...(title ? { title } : {}), ...(alt ? { alt } : {}) };
+    }
+    if (Object.keys(s).length === 1) { say(`Slide ${i + 1}: give a title or a description in at least one language.`, 'bad'); box.querySelector('input[data-f$=title]').focus(); return; }
+    slides.push(s);
+  }
+  try {
+    await api(`/lessons/${enc}/slides`, { method: 'PUT', body: { slides } });
+    await loadSlides();
+    say(`${slides.length} slide${slides.length === 1 ? '' : 's'} saved, in time order. The documents are rebuilt the next time they are opened.`, 'ok');
+  } catch (err) { say(err.message, 'bad'); }
+});
+
+// ---------- the rest ----------
+$('copy-embed').addEventListener('click', () => copyText($('embed').textContent, 'Code copied. Paste it into your lesson page.'));
+$('delete').addEventListener('click', async () => {
+  if (!confirm(`Delete “${lesson.title}” and all its files? This cannot be undone.`)) return;
+  try {
+    await api(`/lessons/${enc}`, { method: 'DELETE' });
+    $('content').innerHTML = `<p>“${esc(lesson.title)}” was deleted. <a href="/provider/lessons">Back to your lessons</a>.</p>`;
+    say('Lesson deleted.', 'ok');
+  } catch (err) { say(err.message, 'bad'); }
+});
+
+</script>
+</body>
+</html>
